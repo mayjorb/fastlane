@@ -1,0 +1,322 @@
+<?php
+
+/**
+ * @file
+ * General functions and hook implementations.
+ *
+ */
+
+/**
+ * Implements hook_views_api().
+ */
+function fastlane_views_api() {
+  return array(
+    'api' => 3,
+  );
+}
+
+/**
+ * Implements hook_translated_menu_link_alter().
+ */
+function fastlane_translated_menu_link_alter(&$item, $map) {
+  // Hide the "User account" link for anonymous users.
+  if ($item['menu_name'] == 'menu-user-menu' && $item['link_path'] == 'user' && user_is_anonymous()) {
+    $item['hidden'] = 1;
+  }
+}
+
+/**
+ * Helper function for user menu tab title.
+ */
+function _fastlane_tab_title($account) {
+  return (is_object($account) && $GLOBALS['user']->uid == $account->uid) ? t('My account') : t('Account overview');
+}
+
+
+/**
+ * Implements hook_menu_alter().
+ */
+function fastlane_menu_alter(&$items) {
+  $items['user/%user']['title callback'] = '_fastlane_page_title';
+  $items['user/%user/connections']['access_callback'] = 'fastlane_access_callback';
+  $items['user/%user/view']['title'] = 'User account';
+  $items['user/%user/view']['title callback'] = '_fastlane_tab_title';
+  $items['user/%user/view']['title arguments'] = array(1);
+  //$items['user/%user/edit']['title'] = 'Update email/password';
+  $items['user']['type'] = MENU_CALLBACK;
+  $items['user/register']['type'] = MENU_CALLBACK;
+  $items['user/password']['type'] = MENU_CALLBACK;
+}
+
+
+
+/**
+ * Implements hook_menu_default_menu_custom().
+ */
+function fastlane_menu_default_menu_custom() {
+  $menus = array();
+
+  // Exported menu: menu-user-menu.
+  $menus['menu-fastlane-user-menu'] = array(
+    'menu_name' => 'menu-fastlane-user-menu',
+    'title' => 'Fastlane User menu',
+    'description' => 'Custom user menu for FastLane',
+  );
+  // Translatables
+  // Included for use with string extractors like potx.
+  t('FastLane User menu');
+  t('Custom user menu for FastLane');
+
+  return $menus;
+}
+
+
+/**
+ * Implements hook_menu_default_menu_links().
+ */
+function fastlane_menu_default_menu_links() {
+  $menu_links = array();
+
+  // Exported menu link: menu-user-menu_create-account:user/register
+  $menu_links['menu-fastlane-user-menu_create-account:user/register'] = array(
+    'menu_name' => 'menu-fastlane-user-menu',
+    'link_path' => 'user/register',
+    'router_path' => 'user/register',
+    'link_title' => 'Create account',
+    'options' => array(
+      'attributes' => array(),
+      'identifier' => 'menu-fastlane-user-menu_create-account:user/register',
+    ),
+    'module' => 'menu',
+    'hidden' => 0,
+    'external' => 0,
+    'has_children' => 0,
+    'expanded' => 0,
+    'weight' => -49,
+    'customized' => 0,
+  );
+  // Exported menu link: menu-user-menu_my-account:user
+  $menu_links['menu-fastlane-user-menu_my-account:user'] = array(
+    'menu_name' => 'menu-fastlane-user-menu',
+    'link_path' => 'user',
+    'router_path' => 'user',
+    'link_title' => 'My account',
+    'options' => array(
+      'attributes' => array(),
+      'alter' => TRUE,
+      'identifier' => 'menu-fastlane-user-menu_my-account:user',
+    ),
+    'module' => 'menu',
+    'hidden' => 0,
+    'external' => 0,
+    'has_children' => 0,
+    'expanded' => 0,
+    'weight' => -48,
+    'customized' => 0,
+  );
+  // Translatables
+  // Included for use with string extractors like potx.
+  t('Create account');
+  t('My account');
+
+
+  return $menu_links;
+}
+
+/**
+ * Implements hook_form_alter().
+ */
+function fastlane_form_alter(&$form, &$form_state, $form_id) {
+
+  if ($form_id == 'user_login') {
+
+    $form['name']['#prefix']  = '<div id="' . $form_id . '_form">';
+    $form['name']['#prefix'] .= '<h2>' . t('Log in') . '</h2>';
+    $form['pass']['#description'] = t('Enter your password.');
+    $form['pass']['#suffix'] = l(t('Forgot your password?'), 'user/password', array('attributes' => array('class' => array('login-password'), 'title' => t('Get a new password'))));
+    $form['actions']['#suffix']  = '</div>';
+    if (variable_get('user_register', USER_REGISTER_VISITORS_ADMINISTRATIVE_APPROVAL) != USER_REGISTER_ADMINISTRATORS_ONLY) {
+      $form['actions']['#suffix'] .= '<div class="create-account clearfix">';
+      $form['actions']['#suffix'] .= "\r<h2>" . t('Don\'t have an account?') . "</h2>";
+      $form['actions']['#suffix'] .= "\r" . l(t('Create an account'), 'user/register', array('attributes' => array('class' => array('login-register btn btn-success'), 'title' => t('Create a new account'))));
+      $form['actions']['#suffix'] .= '</div>';
+      $form['actions']['#prefix']  = '<div class="">';
+      $form['actions']['submit']['#value'] = 'Log in';
+    }
+  }
+
+  if ($form_id == 'user_pass') {
+    $form['name']['#prefix'] = '<div id="' . $form_id . '_form">';
+    $form['name']['#prefix'] .= '<h1>' . t('Request a new password') . '</h1>';
+    $form['actions']['submit']['#suffix'] = '<button class="btn btn-default"><span class="glyphicon glyphicon-arrow-left text-muted" aria-hidden="true"> </span>' . l(t(' Back to login in'), 'user/login', array('attributes' => array('class' => array('login-account'), 'title' => t('Log in')))) . '</button>';
+    $form['actions']['#suffix'] .= '</div>';
+    $form['name']['#description'] = t('We\'ll send a password reset message to your e-mail address.');
+
+  }
+
+  if ($form_id == 'user_pass_reset') {
+   $timeout = variable_get('user_password_reset_timeout', 86400);
+   $current = REQUEST_TIME;
+   $form['actions']['submit']['#value'] = 'Log in';
+   $form['message']['#markup'] = t('<p>This is a one-time log in for %user_name and will expire on %expiration_date.</p><p>Click on this button to login in to the site and change your password.</p>', array('%user_name' => $account->name, '%expiration_date' => format_date($current + $timeout)));
+  }
+
+  if ($form_id == 'user_register_form') {
+    $form['account']['name']['#prefix'] = '<div id="' . $form_id . '">';
+    $form['account']['name']['#prefix'] .= '<h1>' . t('Create account') . '</h1>';
+    $form['actions']['submit']['#suffix'] = '<button class="btn btn-default"><span class="glyphicon glyphicon-arrow-left text-muted" aria-hidden="true"> </span>' . l(t(' Back to login in'), 'user/login', array('attributes' => array('class' => array('login-account'), 'title' => t('Log in')))) . '</button>';
+    $form['actions']['submit']['#suffix'] .= '</div>';
+    $form['account']['mail']['#description'] = t('Enter a valid e-mail address. We will send all messages about your account (e.g., password reset emails) and your FastLane Motorcycle Rental orders to this address. Your e-mail address will not be sold or made public.');
+    $form['account']['pass']['#description'] = t('Enter your new password in both fields.');
+  }
+
+  if ($form_id == 'user_profile_form') {
+     $form['account']['mail']['#weight'] = '-10'; // make field appear at top of form
+     $form['account']['mail']['#description'] = t('Enter a valid e-mail address. We will send all messages about your account (e.g., password reset emails) and your FastLane Motorcycle Rental orders to this address. Your e-mail address will not be sold or made public.');
+     $form['account']['current_pass']['#description'] = t('Enter your current password (required to change your e-mail address or password).<br>
+Forgot your password? <a href="/user/password" title="Request new password via e-mail.">Request new password</a>.');
+     $form['account']['pass']['#description'] = t('Enter your new password in both fields.');
+  }
+
+
+  // add distance from user to booklet form and user information for reservervation
+  if ($form_id == 'availability_calendar_booking_formlet_form') {
+
+    // load $user data;
+    global $user;
+    $user_fields = user_load($user->uid);
+
+    $first_name = $user_fields->field_address['und'][0]['first_name'];
+    $last_name = $user_fields->field_address['und'][0]['last_name'];
+    $street = $user_fields->field_address['und'][0]['thoroughfare']; // street
+    $city = $user_fields->field_address['und'][0]['locality']; // city
+    $state = $user_fields->field_address['und'][0]['administrative_area']; // state
+    $zipcode = $user_fields->field_address['und'][0]['postal_code']; // zipcode
+    $geolocation = $user_fields->field_geofield['und'][0]['geom']; // geofield (POINT (-104.803022838.8879924))
+
+    $form['first_name'] = array(
+      '#type' => 'textfield',
+      '#title' => t('First name'),
+      '#default_value' => $first_name,
+    );
+
+    $form['last_name'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Last name'),
+      '#default_value' => $last_name,
+    );
+
+    $form['street'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Street'),
+      '#default_value' => $street,
+    );
+
+    $form['city'] = array(
+      '#type' => 'textfield',
+      '#title' => t('City'),
+      '#default_value' => $city,
+    );
+
+    $form['state'] = array(
+      '#type' => 'textfield',
+      '#title' => t('State'),
+      '#default_value' => $state,
+    );
+
+    $form['zipcode'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Zipcode'),
+      '#default_value' => $zipcode,
+    );
+
+    // get proximity of user from resource
+    $view_name = 'distance_from_user';
+    $display_id = 'default';
+    $nid = $form['entity_id']['#value'];
+
+   $delivery_distance = trim(strip_tags(views_embed_view($view_name, $display_id, $nid)));
+
+   $delivery_distance_display = $delivery_distance . ' miles';
+
+    $form['delivery_distance'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Delivery distance'),
+      '#default_value' => $delivery_distance,
+    );
+
+    $form['delivery_distance_display'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Delivery distance to your address:'),
+      '#default_value' => $delivery_distance_display,
+    );
+
+
+
+    // $form['delivery_distance_display'] = array(
+    //   '#type' => 'textfield',
+    //   '#title' => t('Devlivery distance to your address: ');
+    //   '#default_value' => $delivery_distance_display,
+
+    // );
+
+    /*
+      calculate the delivery fee.
+      $35 Within NYC
+      Free <= 25 miles
+      $25 < 25 and 50 miles
+      Call for quote greater than 50 miles
+    */
+
+    // set defaults
+    $delivery_distance = $form['delivery_distance']['#default_value'];
+    $delivery_fee = '0';
+    $delivery_fee_display = t('');
+
+    $nyc_zipcodes = array('10001,10002,10003,10004,10005,10006,10007,10009,10010,10011,10012,10013,10014,10015,10016,10017,10018,10019,10020,10021,10022,10023,10024,10025,10026,10027,10028,10029,10030,10031,10032,10033,10034,10035,10036,10037,10038,10039,10040,10041,10044,10045,10048,10055,10060,10069,10090,10095,10098,10099,10103,10104,10105,10106,10107,10110,10111,10112,10115,10118,10119,10120,10121,10122,10123,10128,10151,10152,10153,10154,10155,10158,10161,10162,10165,10166,10167,10168,10169,10170,10171,10172,10173,10174,10175,10176,10177,10178,10199,10270,10271,10278,10279,10280,10281,10282,10301,10302,10303,10304,10305,10306,10307,10308,10309,10310,10311,10312,10314,10451,10452,10453,10454,10455,10456,10457,10458,10459,10460,10461,10462,10463,10464,10465,10466,10467,10468,10469,10470,10471,10472,10473,10474,10475,11004,11101,11102,11103,11104,11105,11106,11109,11201,11203,11204,11205,11206,11207,11208,11209,11210,11211,11212,11213,11214,11215,11216,11217,11218,11219,11220,11221,11222,11223,11224,11225,11226,11228,11229,11230,11231,11232,11233,11234,11235,11236,11237,11238,11239,11241,11242,11243,11249,11252,11256,11351,11354,11355,11356,11357,11358,11359,11360,11361,11362,11363,11364,11365,11366,11367,11368,11369,11370,11371,11372,11373,11374,11375,11377,11378,11379,11385,11411,11412,11413,11414,11415,11416,11417,11418,11419,11420,11421,11422,11423,11426,11427,11428,11429,11430,11432,11433,11434,11435,11436,11691,11692,11693,11694,11697,10451,10452,10453,10454,10455,10456,10457,10458,10459,10460,10461,10462,10463,10464,10465,10466,10467,10468,10469,10470,10471,10472,10473,10474,10475,11201,11203,11204,11205,11206,11207,11208,11209,11210,11211,11212,11213,11214,11215,11216,11217,11218,11219,11220,11221,11222,11223,11224,11225,11226,11228,11229,11230,11231,11232,11233,11234,11235,11236,11237,11238,11239,11241,11242,11243,11249,11252,11256,10001,10002,10003,10004,10005,10006,10007,10009,10010,10011,10012,10013,10014,10015,10016,10017,10018,10019,10020,10021,10022,10023,10024,10025,10026,10027,10028,10029,10030,10031,10032,10033,10034,10035,10036,10037,10038,10039,10040,10041,10044,10045,10048,10055,10060,10069,10090,10095,10098,10099,10103,10104,10105,10106,10107,10110,10111,10112,10115,10118,10119,10120,10121,10122,10123,10128,10151,10152,10153,10154,10155,10158,10161,10162,10165,10166,10167,10168,10169,10170,10171,10172,10173,10174,10175,10176,10177,10178,10199,10270,10271,10278,10279,10280,10281,10282,11101,11102,11103,11004,11104,11105,11106,11109,11351,11354,11355,11356,11357,11358,11359,11360,11361,11362,11363,11364,11365,11366,11367,11368,11369,11370,11371,11372,11373,11374,11375,11377,11378,11379,11385,11411,11412,11413,11414,11415,11416,11417,11418,11419,11420,11421,11422,11423,11426,11427,11428,11429,11430,11432,11433,11434,11435,11436,11691,11692,11693,11694,11697,10301,10302,10303,10304,10305,10306,10307,10308,10309,10310,10311,10312,10314');
+
+
+    if (in_array($zipcode, $nyc_zipcodes)) {
+      $delivery_fee = 35;
+      $delivery_fee_display = t('New York City delivery/pickup fee: $35.00');
+    }
+
+    elseif ($delivery_distance < 25) {
+      $delivery_fee = 0;
+      $delivery_fee_display = t('Free delivery/pickup');
+    }
+
+    elseif (($delivery_distance > 25) && ($delivery_distance <= 50)) {
+      $delivery_fee = '50';
+      $delivery_fee_display = t('Free delivery/pickup within 25-50 miles');
+    }
+
+    else {
+      $delivery_fee = NULL;
+      $delivery_fee_display = t('Contact us for rentals over 50 miles');
+    }
+
+    $form['delivery_fee'] = array(
+      '#type' => 'textfield',
+      '#title' => t('$'),
+      '#default_value' =>  t($delivery_fee_display),
+    );
+
+    $form['delivery_fee_display'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Delivery fee'),
+      '#default_value' =>  t($delivery_fee_display),
+    );
+
+    // $form['delivery_fee_description'] = array(
+    //   '#type' => 'hidden',
+    //   '#title' => t('Delivery fee description'),
+    //   '#default_value' => t('Free delivery (up to 25 miles)'),
+    // );
+
+  } // $form_id == 'availability_calendar_booking_formlet_form')
+
+} // function fastlane_form_alter(&$form, &$form_state, $form_id)
+
+
+
