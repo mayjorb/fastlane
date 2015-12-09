@@ -34,47 +34,19 @@ function _fastlane_tab_title($account) {
 }
 
 
-
-
 /**
  * Implements hook_form_alter().
  */
 function fastlane_form_alter(&$form, &$form_state, $form_id) {
 
-  // add distance from user to booklet form and user information for reservervation
   if ($form_id == 'availability_calendar_booking_formlet_form') {
 
 
-
-    $nid = $form['entity_id']['#value'];
-
-    // get proximity of user from resource, set value and display text
-    $view_name = 'distance_from_user';
-    $display_id = 'default';
-    $delivery_distance = trim(strip_tags(views_embed_view($view_name, $display_id, $nid)));
-    $delivery_distance_display = $delivery_distance . ' miles';
-
-    // add hidden fields
-    $form['delivery_distance'] = array(
-      '#type' => 'hidden',
-      '#default_value' => $delivery_distance,
-    );
-
-    $form['delivery_distance_display'] = array(
-      '#type' => 'hidden',
-      '#default_value' => $delivery_distance_display,
-    );
-
-    // pass name of first photo photo to webform
-    $view_name = 'rental_image';
-    $display_id = 'default';
-    $image_name = trim(strip_tags(views_embed_view($view_name, $display_id, $nid)));
-
-    // add hidden field
-    $form['rental_image'] = array(
-      '#type' => 'textfield',
-      '#default_value' => $image_name,
-    );
+     /******************************************************************
+     *  availability calendar booking formlet overrides
+     *  Add delivery time field
+     *  TODO: Validate delivery times
+     ******************************************************************/
 
     $form['delivery_time'] = array(
        '#type' => 'select',
@@ -100,333 +72,265 @@ function fastlane_form_alter(&$form, &$form_state, $form_id) {
        ),
        // '#default_value' => $category['selected'],
        '#required' => TRUE,
-       '#description' => t('Select dekivery and pick up time'),
-   );
-
-     dpm($form, '$form');
-
-    // load $user data;
-    // global $user;
-    // $user_fields = user_load($user->uid);
-
-    // $first_name = $user_fields->field_address['und'][0]['first_name'];
-    // $last_name = $user_fields->field_address['und'][0]['last_name'];
-    // $street = $user_fields->field_address['und'][0]['thoroughfare']; // street
-    // $city = $user_fields->field_address['und'][0]['locality']; // city
-    // $state = $user_fields->field_address['und'][0]['administrative_area']; // state
-    // $zipcode = $user_fields->field_address['und'][0]['postal_code']; // zipcode
-    // $geolocation = $user_fields->field_geofield['und'][0]['geom']; // geofield (POINT (-104.803022838.8879924))
-
-    // $form['first_name'] = array(
-    //   '#type' => 'hidden',
-    //   '#title' => t('First name'),
-    //   '#default_value' => $first_name,
-    // );
-
-    // $form['last_name'] = array(
-    //   '#type' => 'textfield',
-    //   '#title' => t('Last name'),
-    //   '#default_value' => $last_name,
-    // );
-
-    // $form['street'] = array(
-    //   '#type' => 'textfield',
-    //   '#title' => t('Street'),
-    //   '#default_value' => $street,
-    // );
-
-    // $form['city'] = array(
-    //   '#type' => 'textfield',
-    //   '#title' => t('City'),
-    //   '#default_value' => $city,
-    // );
-
-    // $form['state'] = array(
-    //   '#type' => 'textfield',
-    //   '#title' => t('State'),
-    //   '#default_value' => $state,
-    // );
-
-    // $form['zipcode'] = array(
-    //   '#type' => 'textfield',
-    //   '#title' => t('Zipcode'),
-    //   '#default_value' => $zipcode,
-    // );
-
-
-
-
-    /*
-      calculate the delivery fee.
-      $35 Within NYC
-      Free <= 25 miles
-      $25 < 25 and 50 miles
-      Call for quote greater than 50 miles
-    */
-
-    // set defaults
-    // $delivery_distance = $form['delivery_distance']['#default_value'];
-    // $delivery_fee = '0';
-    // $delivery_fee_display = t('');
-
-    // $nyc_zipcodes = array('10001,10002,10003,10004,10005,10006,10007,10009,10010,10011,10012,10013,10014,10015,10016,10017,10018,10019,10020,10021,10022,10023,10024,10025,10026,10027,10028,10029,10030,10031,10032,10033,10034,10035,10036,10037,10038,10039,10040,10041,10044,10045,10048,10055,10060,10069,10090,10095,10098,10099,10103,10104,10105,10106,10107,10110,10111,10112,10115,10118,10119,10120,10121,10122,10123,10128,10151,10152,10153,10154,10155,10158,10161,10162,10165,10166,10167,10168,10169,10170,10171,10172,10173,10174,10175,10176,10177,10178,10199,10270,10271,10278,10279,10280,10281,10282,10301,10302,10303,10304,10305,10306,10307,10308,10309,10310,10311,10312,10314,10451,10452,10453,10454,10455,10456,10457,10458,10459,10460,10461,10462,10463,10464,10465,10466,10467,10468,10469,10470,10471,10472,10473,10474,10475,11004,11101,11102,11103,11104,11105,11106,11109,11201,11203,11204,11205,11206,11207,11208,11209,11210,11211,11212,11213,11214,11215,11216,11217,11218,11219,11220,11221,11222,11223,11224,11225,11226,11228,11229,11230,11231,11232,11233,11234,11235,11236,11237,11238,11239,11241,11242,11243,11249,11252,11256,11351,11354,11355,11356,11357,11358,11359,11360,11361,11362,11363,11364,11365,11366,11367,11368,11369,11370,11371,11372,11373,11374,11375,11377,11378,11379,11385,11411,11412,11413,11414,11415,11416,11417,11418,11419,11420,11421,11422,11423,11426,11427,11428,11429,11430,11432,11433,11434,11435,11436,11691,11692,11693,11694,11697,10451,10452,10453,10454,10455,10456,10457,10458,10459,10460,10461,10462,10463,10464,10465,10466,10467,10468,10469,10470,10471,10472,10473,10474,10475,11201,11203,11204,11205,11206,11207,11208,11209,11210,11211,11212,11213,11214,11215,11216,11217,11218,11219,11220,11221,11222,11223,11224,11225,11226,11228,11229,11230,11231,11232,11233,11234,11235,11236,11237,11238,11239,11241,11242,11243,11249,11252,11256,10001,10002,10003,10004,10005,10006,10007,10009,10010,10011,10012,10013,10014,10015,10016,10017,10018,10019,10020,10021,10022,10023,10024,10025,10026,10027,10028,10029,10030,10031,10032,10033,10034,10035,10036,10037,10038,10039,10040,10041,10044,10045,10048,10055,10060,10069,10090,10095,10098,10099,10103,10104,10105,10106,10107,10110,10111,10112,10115,10118,10119,10120,10121,10122,10123,10128,10151,10152,10153,10154,10155,10158,10161,10162,10165,10166,10167,10168,10169,10170,10171,10172,10173,10174,10175,10176,10177,10178,10199,10270,10271,10278,10279,10280,10281,10282,11101,11102,11103,11004,11104,11105,11106,11109,11351,11354,11355,11356,11357,11358,11359,11360,11361,11362,11363,11364,11365,11366,11367,11368,11369,11370,11371,11372,11373,11374,11375,11377,11378,11379,11385,11411,11412,11413,11414,11415,11416,11417,11418,11419,11420,11421,11422,11423,11426,11427,11428,11429,11430,11432,11433,11434,11435,11436,11691,11692,11693,11694,11697,10301,10302,10303,10304,10305,10306,10307,10308,10309,10310,10311,10312,10314');
-
-
-    // if (!in_array($zipcode, $nyc_zipcodes)) {
-    //   $delivery_fee = 35;
-    //   $delivery_fee_display = t('New York City delivery/pickup fee: $35.00');
-    // }
-
-    // elseif ($delivery_distance < 25) {
-    //   $delivery_fee = 0;
-    //   $delivery_fee_display = t('Free delivery/pickup');
-    // }
-
-    // elseif (($delivery_distance > 25) && ($delivery_distance <= 50)) {
-    //   $delivery_fee = '50';
-    //   $delivery_fee_display = t('Free delivery/pickup within 25-50 miles');
-    // }
-
-    // else {
-    //   $delivery_fee = NULL;
-    //   $delivery_fee_display = t('Contact us for rentals over 50 miles');
-    // }
-
-    // $form['delivery_fee'] = array(
-    //   '#type' => 'hidden',
-    //   '#title' => t('$'),
-    //   '#default_value' =>  t($delivery_fee),
-    // );
-
-    // $form['delivery_fee_display'] = array(
-    //   '#type' => 'textfield',
-    //   '#title' => t('Delivery fee'),
-    //   '#default_value' =>  t($delivery_fee_display),
-    // );
-
-    // $form['delivery_fee_display'] = array(
-    //   '#type' => 'textfield',
-    //   '#title' => t('Delivery fee'),
-    //   '#default_value' =>  t($delivery_fee_display),
-    // );
-
-
+       '#description' => t('Select delivery and pick up time'),
+       '#weight' => '0',
+    );
 
   } // $form_id == 'availability_calendar_booking_formlet_form')
 
-
   if ($form_id == 'webform_client_form_8') {
+
+    /*****************************************************************************
+    *  Webform overrides
+    *  Form requires that user is logged in
+    *  If logged in, but entity_id isn't set, then redirect to motorcyles page
+    *  Set values for markup fields
+    *  Calculate delivery distance
+   *****************************************************************************/
 
     // create array of query string
     $query_parameters = drupal_get_query_parameters();
 
-    $rental_name = $query_parameters['entity_label'];
+    if (isset($query_parameters['entity_id'])) {
 
-    // set values for form
-    $image_name = $query_parameters['rental_image'];
-    $rental_image = '<img typeof="foaf:Image" class="img-thumbnail img-responsive" alt="photo of '. $rental_name . '" src="/files/styles/medium/public/' . $image_name .'"   />';
+      $nid = $query_parameters['entity_id']; // $nid
 
-    $motorcycle = '<h2 class="title">' . $query_parameters['entity_label'] . '</h2>';
+      // Calculate delivery distance based on user geolocation and location of bike
 
-    $delivery_time = $query_parameters['delivery_time'];
-    // convert military time standard time
-    $delivery_time = date("g:i a", strtotime($delivery_time));
+      // load $user data;
+      global $user;
+      $user_fields = user_load($user->uid);
 
-    $delivery_pickup_display = '<div class="deliver-pickup-wrapper">
-        <p><strong>Deliver:</strong> ' . $query_parameters['from_display'] . ' ' . $delivery_time . '</p>
-        <p><strong>Pickup:</strong> ' . $query_parameters['to_display'] . ' ' . $delivery_time . '</p>
-        <p><strong>Delivery distance:</strong> ' . $query_parameters['delivery_distance_display'] . '</p>
-    </div>';
+      // If for some reason the user isn't logged then redirect to motorcycles pages
+      if ($user_fields->uid != 0) {
 
-    $delivery_distance = $query_parameters['delivery_distance'];
-    $delivery_distance_display = $query_parameters['delivery_distance_display'];
+        $email = $user_fields->mail;
+        $first_name = $user_fields->field_address['und'][0]['first_name'];
+        $last_name = $user_fields->field_address['und'][0]['last_name'];
+        $phone_number = $user_fields->field_phone_number['und'][0]['value'];
+        $address_1 = $user_fields->field_address['und'][0]['thoroughfare']; // street
+        $address_2 = $user_fields->field_address['und'][0]['premise']; // address 2
+        $city = $user_fields->field_address['und'][0]['locality']; // city
+        $state = $user_fields->field_address['und'][0]['administrative_area']; // state
+        $zip_code = $user_fields->field_address['und'][0]['postal_code']; // zipcode
+        // $zip_code = '10103'; // zipcode test if in NYC
+        $geolocation = $user_fields->field_geofield['und'][0]['geom']; // geofield (POINT (-104.803022838.8879924)
 
+        // get proximity of user from resource, set value and display text
+        $view_name = 'distance_from_user';
+        $display_id = 'default';
+        $delivery_distance = trim(strip_tags(views_embed_view($view_name, $display_id, $nid)));
+        $delivery_distance_display = $delivery_distance . ' miles';
 
-    // load $user data;
-    global $user;
-    $user_fields = user_load($user->uid);
+        // add hidden fields
+        $form['delivery_distance'] = array(
+          '#type' => 'hidden',
+          '#default_value' => $delivery_distance,
+        );
 
-    $email = $user_fields->mail;
-    $first_name = $user_fields->field_address['und'][0]['first_name'];
-    $last_name = $user_fields->field_address['und'][0]['last_name'];
-    $phone_number = $user_fields->field_phone_number['und'][0]['value'];
-    $address_1 = $user_fields->field_address['und'][0]['thoroughfare']; // street
-    $address_2 = $user_fields->field_address['und'][0]['premise']; // address 2
-    $city = $user_fields->field_address['und'][0]['locality']; // city
-    $state = $user_fields->field_address['und'][0]['administrative_area']; // state
-    $zip_code = $user_fields->field_address['und'][0]['postal_code']; // zipcode
-    // $zip_code = '10103'; // zipcode test if in NYC
-    $geolocation = $user_fields->field_geofield['und'][0]['geom']; // geofield (POINT (-104.803022838.8879924))
+        $form['delivery_distance_display'] = array(
+          '#type' => 'hidden',
+          '#default_value' => $delivery_distance_display,
+        );
 
-    //dpm($user_fields, '$user_fields');
+        // get image of bike based on entity_id ($nid)
+        $view_name = 'rental_image';
+        $display_id = 'default';
+        $image_name = trim(strip_tags(views_embed_view($view_name, $display_id, $nid)));
+        $rental_name = $query_parameters['entity_label'];
 
+        $rental_image = '<img typeof="foaf:Image" class="img-thumbnail img-responsive" alt="photo of '. $rental_name . '" src="/files/styles/medium/public/images/' . $image_name .'"   />';
 
+        $motorcycle = '<h2 class="title">' . $rental_name . '</h2>';
 
-    //dpm($image_name, '$image_name');
-    //dpm($query_parameters, '$query_parameters');
-    //
-    //dpm($form_state, '$form_state');
-    // dpm($form['submitted']['rental_details'], '$form[\'submitted\'][\'rental_details\']');
-    //
-    // dpm($form['submitted'], '$form[\'submitted\']');
+        $delivery_time = $query_parameters['delivery_time'];
+        // convert military time standard time
+        $delivery_time = date("g:i a", strtotime($delivery_time));
 
+       $duration = ($query_parameters['duration'] - 1); // when choosing day vs over-night the duration is inflated by 1
 
-    // rental details fieldset
-    $form['submitted']['rental_details']['rental_photo']['#markup'] = $rental_image;
-    $form['submitted']['rental_details']['rental_photo']['#wrapper_attributes']['class'][0] = 'col-sm-3';
+       if ($duration > 1) {
+        $duration_display = t($duration . ' days');
+       }
+       else {
+        $duration_display = t($duration . ' day');
+       }
 
-    $form['submitted']['rental_details']['motorcycle']['#title'] = 'You are renting a';
-    $form['submitted']['rental_details']['motorcycle']['#markup'] = $motorcycle;
-    $form['submitted']['rental_details']['motorcycle']['#wrapper_attributes']['class'][0] = 'col-sm-4';
-
-    $form['submitted']['rental_details']['delivery_date_display']['#title'] = 'Delivery and pickup information';
-    $form['submitted']['rental_details']['delivery_date_display']['#markup'] = $delivery_pickup_display;
-    $form['submitted']['rental_details']['delivery_date_display']['#wrapper_attributes']['class'][0] = 'col-sm-5';
-
-
-     // contact fieldset
-    $form['submitted']['contact']['first_name']['#default_value'] = $first_name;
-    $form['submitted']['contact']['last_name']['#default_value'] = $last_name;
-    $form['submitted']['contact']['email']['#default_value'] = $email;
-    $form['submitted']['contact']['phone_number']['#default_value'] = $phone_number;
-
-    // delivery_address fieldset
-    $form['submitted']['delivery_address']['address_1']['#default_value'] = $address_1;
-    $form['submitted']['delivery_address']['address_2']['#default_value'] = $address_2;
-    $form['submitted']['delivery_address']['city']['#default_value'] = $city;
-    $form['submitted']['delivery_address']['state']['#default_value'] = $state;
-    $form['submitted']['delivery_address']['zip_code']['#default_value'] = $zip_code;
+        $delivery_pickup_display = '<div class="deliver-pickup-wrapper">
+         <p><strong>Deliver:</strong> ' . $query_parameters['from_display'] . ' ' . $delivery_time . '</p>
+          <p><strong>Pickup:</strong> ' . $query_parameters['to_display'] . ' ' . $delivery_time . '</p>
+          <p><strong>Delivery distance:</strong> ' . $delivery_distance_display . '</p>
+        </div>';
 
 
-    // $form['submitted']['rental_details']['pickup_date_display']['#title'] = 'Pickup date and time:';
-    // $form['submitted']['rental_details']['pickup_date_display']['#markup'] = $pickup_display;
-    // $form['submitted']['rental_details']['pickup_date_display']['#wrapper_attributes']['class'][0] = 'col-sm-5';
+        // rental details fieldset
+        $form['submitted']['rental_details']['rental_photo']['#markup'] = $rental_image;
+        $form['submitted']['rental_details']['rental_photo']['#wrapper_attributes']['class'][0] = 'col-sm-3';
+
+        // $form['submitted']['rental_details']['motorcycle']['#title'] = 'You are reserving the';
+        $form['submitted']['rental_details']['motorcycle']['#markup'] = $motorcycle;
+        $form['submitted']['rental_details']['motorcycle']['#wrapper_attributes']['class'][0] = 'col-sm-4';
+
+        $form['submitted']['rental_details']['delivery_date_display']['#title'] = 'Delivery and pickup information';
+        $form['submitted']['rental_details']['delivery_date_display']['#markup'] = $delivery_pickup_display;
+        $form['submitted']['rental_details']['delivery_date_display']['#wrapper_attributes']['class'][0] = 'col-sm-5';
 
 
-    /*
-      calculate the delivery fee.
-      $35 Within NYC
-      Free <= 25 miles
-      $25 < 25 and 50 miles
-      Call for quote greater than 50 miles
-    */
+       // contact fieldset
+        $form['submitted']['contact']['first_name']['#default_value'] = $first_name;
+        $form['submitted']['contact']['last_name']['#default_value'] = $last_name;
+        $form['submitted']['contact']['email']['#default_value'] = $email;
+        $form['submitted']['contact']['phone_number']['#default_value'] = $phone_number;
 
-    // set defaults
-    // $delivery_distance = $form['delivery_distance']['#default_value'];
-    $delivery_fee = '0';
-    $delivery_fee_display = t('');
-
-    $nyc_zipcodes = '10001,10002,10003,10004,10005,10006,10007,10009,10010,10011,10012,10013,10014,10015,10016,10017,10018,10019,10020,10021,10022,10023,10024,10025,10026,10027,10028,10029,10030,10031,10032,10033,10034,10035,10036,10037,10038,10039,10040,10041,10044,10045,10048,10055,10060,10069,10090,10095,10098,10099,10103,10104,10105,10106,10107,10110,10111,10112,10115,10118,10119,10120,10121,10122,10123,10128,10151,10152,10153,10154,10155,10158,10161,10162,10165,10166,10167,10168,10169,10170,10171,10172,10173,10174,10175,10176,10177,10178,10199,10270,10271,10278,10279,10280,10281,10282,10301,10302,10303,10304,10305,10306,10307,10308,10309,10310,10311,10312,10314,10451,10452,10453,10454,10455,10456,10457,10458,10459,10460,10461,10462,10463,10464,10465,10466,10467,10468,10469,10470,10471,10472,10473,10474,10475,11004,11101,11102,11103,11104,11105,11106,11109,11201,11203,11204,11205,11206,11207,11208,11209,11210,11211,11212,11213,11214,11215,11216,11217,11218,11219,11220,11221,11222,11223,11224,11225,11226,11228,11229,11230,11231,11232,11233,11234,11235,11236,11237,11238,11239,11241,11242,11243,11249,11252,11256,11351,11354,11355,11356,11357,11358,11359,11360,11361,11362,11363,11364,11365,11366,11367,11368,11369,11370,11371,11372,11373,11374,11375,11377,11378,11379,11385,11411,11412,11413,11414,11415,11416,11417,11418,11419,11420,11421,11422,11423,11426,11427,11428,11429,11430,11432,11433,11434,11435,11436,11691,11692,11693,11694,11697,10451,10452,10453,10454,10455,10456,10457,10458,10459,10460,10461,10462,10463,10464,10465,10466,10467,10468,10469,10470,10471,10472,10473,10474,10475,11201,11203,11204,11205,11206,11207,11208,11209,11210,11211,11212,11213,11214,11215,11216,11217,11218,11219,11220,11221,11222,11223,11224,11225,11226,11228,11229,11230,11231,11232,11233,11234,11235,11236,11237,11238,11239,11241,11242,11243,11249,11252,11256,10001,10002,10003,10004,10005,10006,10007,10009,10010,10011,10012,10013,10014,10015,10016,10017,10018,10019,10020,10021,10022,10023,10024,10025,10026,10027,10028,10029,10030,10031,10032,10033,10034,10035,10036,10037,10038,10039,10040,10041,10044,10045,10048,10055,10060,10069,10090,10095,10098,10099,10103,10104,10105,10106,10107,10110,10111,10112,10115,10118,10119,10120,10121,10122,10123,10128,10151,10152,10153,10154,10155,10158,10161,10162,10165,10166,10167,10168,10169,10170,10171,10172,10173,10174,10175,10176,10177,10178,10199,10270,10271,10278,10279,10280,10281,10282,11101,11102,11103,11004,11104,11105,11106,11109,11351,11354,11355,11356,11357,11358,11359,11360,11361,11362,11363,11364,11365,11366,11367,11368,11369,11370,11371,11372,11373,11374,11375,11377,11378,11379,11385,11411,11412,11413,11414,11415,11416,11417,11418,11419,11420,11421,11422,11423,11426,11427,11428,11429,11430,11432,11433,11434,11435,11436,11691,11692,11693,11694,11697,10301,10302,10303,10304,10305,10306,10307,10308,10309,10310,10311,10312,10314';
+        // delivery_address fieldset
+        $form['submitted']['delivery_address']['address_1']['#default_value'] = $address_1;
+        $form['submitted']['delivery_address']['address_2']['#default_value'] = $address_2;
+        $form['submitted']['delivery_address']['city']['#default_value'] = $city;
+        $form['submitted']['delivery_address']['state']['#default_value'] = $state;
+        $form['submitted']['delivery_address']['zip_code']['#default_value'] = $zip_code;
 
 
-   // If it's a NYC zipcode, $35 charge
-    if (stristr($nyc_zipcodes, $zip_code)) {
-      $delivery_fee = 35;
-      $delivery_fee_display = t('New York City delivery/pickup fee: $35.00');
-    }
+        /*
+          calculate the delivery fee.
+          $35 Within NYC
+          Free <= 25 miles
+          $25 < 25 and 50 miles
+          Call for quote greater than 50 miles
+        */
 
-    elseif ($delivery_distance < 25) {
-      $delivery_fee = 0;
-      $delivery_fee_display = t('Free delivery/pickup');
-    }
+        // set defaults
+        // $delivery_distance = $form['delivery_distance']['#default_value'];
+        $delivery_fee = '0';
+        $delivery_fee_display = t('');
 
-    elseif (($delivery_distance > 25) && ($delivery_distance <= 50)) {
-      $delivery_fee = '50';
-      $delivery_fee_display = t('Free delivery/pickup within 25-50 miles');
+        $nyc_zipcodes = '10001,10002,10003,10004,10005,10006,10007,10009,10010,10011,10012,10013,10014,10015,10016,10017,10018,10019,10020,10021,10022,10023,10024,10025,10026,10027,10028,10029,10030,10031,10032,10033,10034,10035,10036,10037,10038,10039,10040,10041,10044,10045,10048,10055,10060,10069,10090,10095,10098,10099,10103,10104,10105,10106,10107,10110,10111,10112,10115,10118,10119,10120,10121,10122,10123,10128,10151,10152,10153,10154,10155,10158,10161,10162,10165,10166,10167,10168,10169,10170,10171,10172,10173,10174,10175,10176,10177,10178,10199,10270,10271,10278,10279,10280,10281,10282,10301,10302,10303,10304,10305,10306,10307,10308,10309,10310,10311,10312,10314,10451,10452,10453,10454,10455,10456,10457,10458,10459,10460,10461,10462,10463,10464,10465,10466,10467,10468,10469,10470,10471,10472,10473,10474,10475,11004,11101,11102,11103,11104,11105,11106,11109,11201,11203,11204,11205,11206,11207,11208,11209,11210,11211,11212,11213,11214,11215,11216,11217,11218,11219,11220,11221,11222,11223,11224,11225,11226,11228,11229,11230,11231,11232,11233,11234,11235,11236,11237,11238,11239,11241,11242,11243,11249,11252,11256,11351,11354,11355,11356,11357,11358,11359,11360,11361,11362,11363,11364,11365,11366,11367,11368,11369,11370,11371,11372,11373,11374,11375,11377,11378,11379,11385,11411,11412,11413,11414,11415,11416,11417,11418,11419,11420,11421,11422,11423,11426,11427,11428,11429,11430,11432,11433,11434,11435,11436,11691,11692,11693,11694,11697,10451,10452,10453,10454,10455,10456,10457,10458,10459,10460,10461,10462,10463,10464,10465,10466,10467,10468,10469,10470,10471,10472,10473,10474,10475,11201,11203,11204,11205,11206,11207,11208,11209,11210,11211,11212,11213,11214,11215,11216,11217,11218,11219,11220,11221,11222,11223,11224,11225,11226,11228,11229,11230,11231,11232,11233,11234,11235,11236,11237,11238,11239,11241,11242,11243,11249,11252,11256,10001,10002,10003,10004,10005,10006,10007,10009,10010,10011,10012,10013,10014,10015,10016,10017,10018,10019,10020,10021,10022,10023,10024,10025,10026,10027,10028,10029,10030,10031,10032,10033,10034,10035,10036,10037,10038,10039,10040,10041,10044,10045,10048,10055,10060,10069,10090,10095,10098,10099,10103,10104,10105,10106,10107,10110,10111,10112,10115,10118,10119,10120,10121,10122,10123,10128,10151,10152,10153,10154,10155,10158,10161,10162,10165,10166,10167,10168,10169,10170,10171,10172,10173,10174,10175,10176,10177,10178,10199,10270,10271,10278,10279,10280,10281,10282,11101,11102,11103,11004,11104,11105,11106,11109,11351,11354,11355,11356,11357,11358,11359,11360,11361,11362,11363,11364,11365,11366,11367,11368,11369,11370,11371,11372,11373,11374,11375,11377,11378,11379,11385,11411,11412,11413,11414,11415,11416,11417,11418,11419,11420,11421,11422,11423,11426,11427,11428,11429,11430,11432,11433,11434,11435,11436,11691,11692,11693,11694,11697,10301,10302,10303,10304,10305,10306,10307,10308,10309,10310,10311,10312,10314';
+
+
+       // If it's a NYC zipcode, $35 charge
+        if (stristr($nyc_zipcodes, $zip_code)) {
+          $delivery_fee = 35;
+          $delivery_fee_display = t('New York City delivery/pickup fee: $35.00');
+          $delivery_fee_flag = FALSE;
+        }
+
+        elseif ($delivery_distance < 25) {
+          $delivery_fee = 0;
+          $delivery_fee_display = t('Free delivery/pickup');
+          $delivery_fee_flag = FALSE;
+        }
+
+        elseif (($delivery_distance > 25) && ($delivery_distance <= 50)) {
+          $delivery_fee = '50';
+          $delivery_fee_display = t('Free delivery/pickup within 25-50 miles');
+          $delivery_fee_flag = FALSE;
+        }
+
+        else {
+          $delivery_fee = NULL;
+          $delivery_fee_display = t('Contact us for rentals over 50 miles');
+          $delivery_fee_flag = TRUE;
+        }
+
+        $form['delivery_fee'] = array(
+          '#type' => 'textfield',
+          '#title' => t('$'),
+          '#default_value' =>  t($delivery_fee),
+        );
+
+        $form['delivery_fee_display'] = array(
+          '#type' => 'textfield',
+          '#title' => t('Delivery fee'),
+          '#default_value' =>  t($delivery_fee_display),
+        );
+
+        $form['delivery_fee_flag'] = array(
+          '#type' => 'textfield',
+          '#title' => t('Delivery fee flag'),
+          '#default_value' =>  t('Negotiate fee with customer and collect on delivery'),
+        );
+
+
+        $form['card_authorization_notice'] = array(
+          '#type' => 'textfield',
+          '#title' => t('Please note'),
+          '#default_value' =>  t('TODO Add text from FAQ or link to it'),
+        );
+
+
+        /*
+          calculate rental fee, delivery fee, tax and total amount
+          $250 per 24 hours X $duration
+          $total_rental = $duration*250
+          NJ tax rate 7.0%
+          $tax=($salary*07)/100;
+          $total_amount = ($total_rental+$tax);
+        */
+
+
+        $rental_rate = 250;
+        $total_rental = ($duration*$rental_rate);
+        $taxable_total = ($total_rental+$delivery_fee);
+        $tax = ($taxable_total*07)/100;
+        $total_amount = ($taxable_total+$tax);
+
+        $form['rental_rate'] = array(
+          '#type' => 'textfield',
+          '#title' => t('Daily rate'),
+          '#default_value' =>  250,
+        );
+
+        $form['duration'] = array(
+          '#type' => 'hidden',
+          '#title' => t('Length of rental'),
+          '#default_value' =>  $duration,
+        );
+
+        $form['duration_display'] = array(
+          '#type' => 'textfield',
+          '#title' => t('Length of rental'),
+          '#default_value' =>  $duration_display,
+        );
+
+        $form['total_rental'] = array(
+          '#type' => 'textfield',
+          '#title' => t('rental total'),
+          '#default_value' =>  $total_rental,
+        );
+
+        $form['subtotal'] = array(
+          '#type' => 'textfield',
+          '#title' => t('subtotal'),
+          '#default_value' =>  $taxable_total,
+        );
+
+        $form['tax'] = array(
+          '#type' => 'textfield',
+          '#title' => t('NJ tax rate'),
+          '#default_value' =>  $tax,
+        );
+
+        $form['total_amount'] = array(
+          '#type' => 'textfield',
+          '#title' => t('total_amount'),
+          '#default_value' =>  $total_amount,
+        );
+
+
+
+
+
+      }
+
     }
 
     else {
-      $delivery_fee = NULL;
-      $delivery_fee_display = t('Contact us for rentals over 50 miles');
+
+      drupal_goto('motorcycles');
+
     }
 
-    $form['delivery_fee'] = array(
-      '#type' => 'textfield',
-      '#title' => t('$'),
-      '#default_value' =>  t($delivery_fee),
-    );
 
-    $form['delivery_fee_display'] = array(
-      '#type' => 'textfield',
-      '#title' => t('Delivery fee'),
-      '#default_value' =>  t($delivery_fee_display),
-    );
-
-
-
-    // $form['submitted']['rental_details']['photo']['#default_value'] = '<img src="files/styles/thumbnail/public/scout-sixty-thunder-black.jpg/" > ';
-    //
-
-
-
-
-    //dpm($form_state, '$form_state');
-    //dpm($form['submitted']['rental_details'], '$form[\'submitted\'][\'rental_details\']');
-    //   ['#markup'] => '<img src="/files/styles/thumbnail/public/scrambler-rescaled.png" /> ',
-    //   //'#wrapper_attributes' => ['class'] => 'col-md-4''
-    // );
-
-
-
-
-    // ['#markup']  = '<img src="/files/styles/thumbnail/public/scrambler-rescaled.png" /> ';
-
-    // $form['submitted']['rental_details']['rental_photo']['#webform_component']['extra']['wrapper_classes'] = 'col-md-4';
-
-    // $form['submitted']['rental_details']['rental_photo']['#wrapper_attributes']['class'] = 'col-md-4';
-
-    // $form['first_name'] = array(
-    //   '#type' => 'hidden',
-    //   '#title' => t('First name'),
-    //   '#default_value' => $first_name,
-    // );
-
-    // $form['last_name'] = array(
-    //   '#type' => 'textfield',
-    //   '#title' => t('Last name'),
-    //   '#default_value' => $last_name,
-    // );
-
-    // $form['street'] = array(
-    //   '#type' => 'textfield',
-    //   '#title' => t('Street'),
-    //   '#default_value' => $street,
-    // );
-
-    // $form['city'] = array(
-    //   '#type' => 'textfield',
-    //   '#title' => t('City'),
-    //   '#default_value' => $city,
-    // );
-
-    // $form['state'] = array(
-    //   '#type' => 'textfield',
-    //   '#title' => t('State'),
-    //   '#default_value' => $state,
-    // );
-
-    // $form['zipcode'] = array(
-    //   '#type' => 'textfield',
-    //   '#title' => t('Zipcode'),
-    //   '#default_value' => $zipcode,
-    // );
-
-    //$form['#node']->webform['components'][19]['value'] = 'line 217';
-    //$form['#node']->webform['components'][19]['value'] = 'line 217';
-    // );
-    //dpm($form['#node']->webform['components'], 'components');
-    //
-    //$form_state['webform']['component_tree']['children'][17]['children'][19]['value'] = 'hey now from 222';
-
-
-
-   // $form['#node']->webform['components'][2]['value'] = 'whatever';
-    //
-    //
-    //$form['submitted']['my_form_component'];
-    //dpm($com2);
-    //['#node']->webform['components'][19]['value'] = 'whatever';
-  }
+  } // $form_id == 'webform_client_form_8')
 
 } // function fastlane_form_alter(&$form, &$form_state, $form_id)
 
@@ -528,7 +432,7 @@ function fastlane_menu_default_menu_links() {
 function mymodule_form_alter( &$form, &$form_state,$form_id ){
   // this is for your developer information and shows you the
   // structure of the form array
-  dpm($form);
+  //dpm($form);
   // this will give you the details for my_form_component
   $a_component = $form['submitted']['my_form_component'];
   dpm($a_component);
@@ -540,29 +444,56 @@ function mymodule_form_alter( &$form, &$form_state,$form_id ){
   }
 }
 
-
+function fastlane_init() {
+  module_load_include('inc', 'availability_calendar');
+}
 
 /**
- * Respond to a Webform submission being updated.
+ * Respond to a Webform submission being inserted.
  *
  * Note that this hook is called after a submission has already been saved to
- * the database. If needing to modify the submission prior to updating, use
+ * the database. If needing to modify the submission prior to insertion, use
  * hook_webform_submission_presave().
  *
  * @param $node
  *   The Webform node on which this submission was made.
  * @param $submission
- *   The Webform submission that was just updated in the database.
+ *   The Webform submission that was just inserted into the database.
  */
-function hook_webform_submission_update($node, $submission) {
+function fastlane_webform_submission_insert($node, $submission) {
   // Update a record in a 3rd-party module table when a submission is updated.
-  db_update('mymodule_table')
+  //
+  // dpm($node, '$node');
+  // dpm($submission->data, '$submission->data');
+
+//   module_load_include('inc', 'availability_calendar');
+//   //
+  db_update('availability_calendar_availability')
     ->fields(array(
-      'foo' => 'foo_data',
+      'date' => $submission->data[28][0],
+      'sid' => '4', // this is the Pending state
     ))
-    ->condition('nid', $node->nid)
-    ->condition('sid', $submission->sid)
+    ->condition('cid', $submission->data[30][0], '=')
+    ->condition('date', $submission->data[28][0], '=')
     ->execute();
+
+  db_update('availability_calendar_availability')
+    ->fields(array(
+      'date' => $submission->data[29][0],
+      'sid' => '4', // this is the Pending state
+    ))
+    ->condition('cid', $submission->data[30][0], '=')
+    ->condition('date', $submission->data[29][0], '=')
+    ->execute();
+
+  // drupal_set_message('deliver date - cid = ' . $submission->cid->value . ' from-date = ' . $submission->from_iso->value);
+  // drupal_set_message('pickup date - cid = ' . $submission->cid->value . ' to-date = ' . $submission->to_iso->value);
+  //
+  // drupal_set_message('nid = ' . $node->nid);
+  // drupal_set_message('sid = ' . $submission->sid);
+  // drupal_set_message('deliver date = ' . $submission->data[28][0]);
+  // drupal_set_message('pick-up date = ' . $submission->data[29][0]);
+  // drupal_set_message('calendar id = ' . $submission->data[30][0]);
 }
 
 
