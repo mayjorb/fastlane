@@ -52,7 +52,6 @@ function fastlane_form_alter(&$form, &$form_state, $form_id) {
        '#type' => 'select',
        '#title' => t('Delivery and pickup time,'),
        '#options' => array(
-          '' => t('Select delivery time'),
           '0700' => t('07:00 am'),
           '0800' => t('08:00 am'),
           '0900' => t('09:00 am'),
@@ -80,12 +79,15 @@ function fastlane_form_alter(&$form, &$form_state, $form_id) {
 
   if ($form_id == 'webform_client_form_8') {
 
+    // dpm($form['submitted'], '$form submitted');
+
     /*****************************************************************************
     *  Webform overrides
     *  Form requires that user is logged in
     *  If logged in, but entity_id isn't set, then redirect to motorcyles page
     *  Set values for markup fields
     *  Calculate delivery distance
+    *  Calculate final cost
    *****************************************************************************/
 
     // create array of query string
@@ -122,27 +124,6 @@ function fastlane_form_alter(&$form, &$form_state, $form_id) {
         $delivery_distance = trim(strip_tags(views_embed_view($view_name, $display_id, $nid)));
         $delivery_distance_display = $delivery_distance . ' miles';
 
-        // add hidden fields
-        $form['delivery_distance'] = array(
-          '#type' => 'hidden',
-          '#default_value' => $delivery_distance,
-        );
-
-        $form['delivery_distance_display'] = array(
-          '#type' => 'hidden',
-          '#default_value' => $delivery_distance_display,
-        );
-
-        // get image of bike based on entity_id ($nid)
-        $view_name = 'rental_image';
-        $display_id = 'default';
-        $image_name = trim(strip_tags(views_embed_view($view_name, $display_id, $nid)));
-        $rental_name = $query_parameters['entity_label'];
-
-        $rental_image = '<img typeof="foaf:Image" class="img-thumbnail img-responsive" alt="photo of '. $rental_name . '" src="/files/styles/medium/public/images/' . $image_name .'"   />';
-
-        $motorcycle = '<h2 class="title">' . $rental_name . '</h2>';
-
         $delivery_time = $query_parameters['delivery_time'];
         // convert military time standard time
         $delivery_time = date("g:i a", strtotime($delivery_time));
@@ -156,25 +137,11 @@ function fastlane_form_alter(&$form, &$form_state, $form_id) {
         $duration_display = t($duration . ' day');
        }
 
-        $delivery_pickup_display = '<div class="deliver-pickup-wrapper">
-         <p><strong>Deliver:</strong> ' . $query_parameters['from_display'] . ' ' . $delivery_time . '</p>
-          <p><strong>Pickup:</strong> ' . $query_parameters['to_display'] . ' ' . $delivery_time . '</p>
-          <p><strong>Delivery distance:</strong> ' . $delivery_distance_display . '</p>
-        </div>';
 
+      // dynamic values
+      $form['submitted']['rental_details']['deliver_pickup_time']['#default_value'] = $delivery_time;
 
-        // rental details fieldset
-        $form['submitted']['rental_details']['rental_photo']['#markup'] = $rental_image;
-        $form['submitted']['rental_details']['rental_photo']['#wrapper_attributes']['class'][0] = 'col-sm-3';
-
-        // $form['submitted']['rental_details']['motorcycle']['#title'] = 'You are reserving the';
-        $form['submitted']['rental_details']['motorcycle']['#markup'] = $motorcycle;
-        $form['submitted']['rental_details']['motorcycle']['#wrapper_attributes']['class'][0] = 'col-sm-4';
-
-        $form['submitted']['rental_details']['delivery_date_display']['#title'] = 'Delivery and pickup information';
-        $form['submitted']['rental_details']['delivery_date_display']['#markup'] = $delivery_pickup_display;
-        $form['submitted']['rental_details']['delivery_date_display']['#wrapper_attributes']['class'][0] = 'col-sm-5';
-
+      $form['submitted']['duration']['#default_value'] = $duration;
 
        // contact fieldset
         $form['submitted']['contact']['first_name']['#default_value'] = $first_name;
@@ -188,7 +155,6 @@ function fastlane_form_alter(&$form, &$form_state, $form_id) {
         $form['submitted']['delivery_address']['city']['#default_value'] = $city;
         $form['submitted']['delivery_address']['state']['#default_value'] = $state;
         $form['submitted']['delivery_address']['zip_code']['#default_value'] = $zip_code;
-
 
         /*
           calculate the delivery fee.
@@ -227,34 +193,10 @@ function fastlane_form_alter(&$form, &$form_state, $form_id) {
 
         else {
           $delivery_fee = NULL;
-          $delivery_fee_display = t('Contact us for rentals over 50 miles');
+          $delivery_fee_display = t('We will contact you regarding the delivery fee');
           $delivery_fee_flag = TRUE;
         }
 
-        $form['delivery_fee'] = array(
-          '#type' => 'textfield',
-          '#title' => t('$'),
-          '#default_value' =>  t($delivery_fee),
-        );
-
-        $form['delivery_fee_display'] = array(
-          '#type' => 'textfield',
-          '#title' => t('Delivery fee'),
-          '#default_value' =>  t($delivery_fee_display),
-        );
-
-        $form['delivery_fee_flag'] = array(
-          '#type' => 'textfield',
-          '#title' => t('Delivery fee flag'),
-          '#default_value' =>  t('Negotiate fee with customer and collect on delivery'),
-        );
-
-
-        $form['card_authorization_notice'] = array(
-          '#type' => 'textfield',
-          '#title' => t('Please note'),
-          '#default_value' =>  t('TODO Add text from FAQ or link to it'),
-        );
 
 
         /*
@@ -266,57 +208,43 @@ function fastlane_form_alter(&$form, &$form_state, $form_id) {
           $total_amount = ($total_rental+$tax);
         */
 
-
         $rental_rate = 250;
+        $rental_rate_display = number_format($rental_rate,2);
         $total_rental = ($duration*$rental_rate);
+        $total_rental_display = '$' . number_format($total_rental,2);
         $taxable_total = ($total_rental+$delivery_fee);
+        $taxable_total_display = '$' . number_format($taxable_total,2);
         $tax = ($taxable_total*07)/100;
+        $tax_display = '$' . number_format($tax,2);
         $total_amount = ($taxable_total+$tax);
-
-        $form['rental_rate'] = array(
-          '#type' => 'textfield',
-          '#title' => t('Daily rate'),
-          '#default_value' =>  250,
-        );
-
-        $form['duration'] = array(
-          '#type' => 'hidden',
-          '#title' => t('Length of rental'),
-          '#default_value' =>  $duration,
-        );
-
-        $form['duration_display'] = array(
-          '#type' => 'textfield',
-          '#title' => t('Length of rental'),
-          '#default_value' =>  $duration_display,
-        );
-
-        $form['total_rental'] = array(
-          '#type' => 'textfield',
-          '#title' => t('rental total'),
-          '#default_value' =>  $total_rental,
-        );
-
-        $form['subtotal'] = array(
-          '#type' => 'textfield',
-          '#title' => t('subtotal'),
-          '#default_value' =>  $taxable_total,
-        );
-
-        $form['tax'] = array(
-          '#type' => 'textfield',
-          '#title' => t('NJ tax rate'),
-          '#default_value' =>  $tax,
-        );
-
-        $form['total_amount'] = array(
-          '#type' => 'textfield',
-          '#title' => t('total_amount'),
-          '#default_value' =>  $total_amount,
-        );
+        $total_amount_display = '$' . number_format($total_amount,2);
 
 
+        // set payment field values
+        $form['submitted']['rates_fees']['delivery_distance']['#default_value'] = $delivery_distance_display;
+        $form['submitted']['rates_fees']['delivery_fee']['#default_value'] = $delivery_fee_display;
 
+        $form['submitted']['rates_fees']['rental_rate']['#default_value'] = $rental_rate_display;
+        $form['submitted']['rates_fees']['duration']['#default_value'] = $duration_display;
+        $form['submitted']['rates_fees']['total_rental']['#default_value'] = $total_rental_display;
+
+        $form['submitted']['rates_fees']['subtotal']['#default_value'] = $taxable_total_display;
+        $form['submitted']['rates_fees']['tax']['#default_value'] = $tax_display;
+        $form['submitted']['rates_fees']['total_cost']['#default_value'] = $total_amount_display;
+
+
+        // $form['delivery_fee_flag'] = array(
+        //   '#type' => 'textfield',
+        //   '#title' => t('Delivery fee flag'),
+        //   '#default_value' =>  t('Negotiate fee with customer and collect on delivery'),
+        // );
+
+
+        // $form['card_authorization_notice'] = array(
+        //   '#type' => 'textfield',
+        //   '#title' => t('Please note'),
+        //   '#default_value' =>  t('TODO Add text from FAQ or link to it'),
+        // );
 
 
       }
