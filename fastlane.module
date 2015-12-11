@@ -267,7 +267,8 @@ function fastlane_webform_submission_insert($node, $submission) {
   db_update('availability_calendar_availability')
     ->fields(array(
       'date' => $submission->data[28][0],
-      'sid' => '4', // this is the Pending state
+      // 'sid' => '4', // this is the Pending state
+      'sid' => '3', // this is the Rented state
     ))
     ->condition('cid', $submission->data[30][0], '=')
     ->condition('date', $submission->data[28][0], '=')
@@ -276,7 +277,8 @@ function fastlane_webform_submission_insert($node, $submission) {
   db_update('availability_calendar_availability')
     ->fields(array(
       'date' => $submission->data[29][0],
-      'sid' => '4', // this is the Pending state
+      // 'sid' => '4', // this is the Pending state
+      'sid' => '3', // this is the Rented state
     ))
     ->condition('cid', $submission->data[30][0], '=')
     ->condition('date', $submission->data[29][0], '=')
