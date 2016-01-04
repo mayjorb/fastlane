@@ -8,6 +8,225 @@
  */
 
 /**
+ * Implements hook_menu().
+ */
+function fastlane_menu() {
+  $items = array();
+
+  $items['payeezy'] = array(
+    'title' => 'Payeezy Gateway Post',
+    'description' => 'Payeezy POST.',
+    'page callback' => 'fastlane_payeezy_post_callback',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  );
+
+  $items['payment/%/%'] = array(
+    'title' => 'Payeezy Payment Form',
+    'description' => 'Creates form for posting reservations to Payeezy Gateway',
+    'page callback' => 'fastlane_payeezy_form_callback',
+    'page arguments' => array(2, 3),
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  );
+
+  return $items;
+}
+
+/**
+ * Menu callback function for Payeezy to send back confirmation of payment.
+ */
+function fastlane_payeezy_post_callback() {
+  $content = t('you have arrived the payeezy way');
+  $content .= t('Tame the query string!');
+
+}
+
+/**
+ * A simple page callback.
+ *
+ * Page callbacks are required to return the entire page. The content
+ * is then usually output via a call to theme('page'), where the theme system
+ * will then surround the content in the appropriate blocks, navigation, and
+ * styling.
+ *
+ * If you do not want to use the theme system (for example for outputting an
+ * image or XML), you should print the content yourself and not return anything.
+ */
+
+/**
+ * Menu callback function for Payeezy Form page.
+ */
+function fastlane_payeezy_form_callback() {
+
+  $my_webform_nid = arg(1);
+  $my_sid = arg(2);
+
+  $node = node_load($my_webform_nid);
+  $nodes = array($node->nid => $node);
+  webform_node_load($nodes,array('webform'));
+
+  $components = $nodes[$node->nid]->webform['components'];
+  $data = webform_menu_submission_load($my_sid,$my_webform_nid)->data;
+  //dpm($components = $nodes[$node->nid]->webform['components'], '$components');
+  //dpm($data = webform_menu_submission_load($my_sid,$my_webform_nid)->data, '$data');
+
+  // set easy to remember vars from data array
+  $customer_id = $data[55][0];
+  $first_name = $data[2][0];
+  $last_name = $data[3][0];
+  $email = $data[1][0];
+  $phone_number = $data[9][0];
+  $address = $data[11][0] . $data[12][0];
+  $city = $data[13][0];
+  $state = $data[32][0];
+  $zip = $data[15][0];
+  $country = 'United States';
+
+  //$rental_total = $data[46][0];
+  $daily_rental_fee = '250.00';
+  $sub_total = $data[50][0];
+  $tax_total = $data[49][0];
+  $grand_total = $data[51][0];
+  $delivery_fee = $data[48][0];
+  $delivery_fee_display = 'Delivery fee';
+  //dpm($delivery_fee, '$delivery_fee');
+  $tax_amount_display = $data[49][0];
+
+  $bike_id = $my_webform_nid;
+  $length_of_rental = $data[45][0];
+  $motorcycle = $data[37][0];
+  $description = 'motorcycle rental';
+  $duration = $data[57][0];
+
+  //$delivery_fee = 0;
+
+  // dpm($data);
+  // dpm($duration, '$duration');
+
+  $motorcycle_line_item = $bike_id . '<|>' . $motorcycle . '<|>' .   $motorcycle . ' ' . $description . '<|>' . $duration  . '<|>' . $daily_rental_fee . '<|>YES';
+
+  // $delivery_line_item = // df<|>35<|>NYC Delivery fee<|>1<|>35<|>YES";
+  //$tax_line_item = //value="1<|>2016 Indian<|>One baddass bike<|>1<|>250.00<|>YES" type="text" />';
+
+  $delivery_line_item = 'df<|>Delivery fee<|>' .  $delivery_fee_display . '<|>1<|>' . $delivery_fee . '<|>YES';
+
+  //$delivery_line_item = trim('df<|>Delivery fee<|>' . $delivery_fee_display . '<|>1<|>' . $delivery_fee . '<|>YES');
+
+  //$tax_line_item = 'tx<|>Delivery fee<|>TBD<|>1<|>' . $tax_total . '<|>YES';
+  $tax_line_item = 'tx<|>NJ Tax<|>New Jesey tax 7%<|>1<|>' . $tax_total . '<|>NO';
+
+  dpm($motorcycle_line_item, '$motorcycle_line_item');
+  dpm($delivery_line_item, '$delivery_line_item');
+  dpm($tax_line_item, 'tax line item');
+
+  // generate invoice number 2016-01-03 40-1
+  $invoice_number = date('Y-m-d') . ' ' . $my_sid . '-' . $customer_id ;
+
+  // fields required for payeezy gateway
+  $x_login = "HCO-FREEL-525"; // Take from Payment Page ID in Payment Pages interface
+  $transaction_key = "Ibow1_b7G52nAoEyKtHn"; // Take from Payment Pages configuration interface
+  $x_amount = $grand_total;
+  // $x_amount = $_POST["x_amount"];
+  $x_currency_code = "USD"; // Needs to agree with the currency of the payment page
+srand(time()); // initialize random generator for x_fp_sequence
+  $x_fp_sequence = rand(1000, 100000) + 123456;
+  $x_fp_timestamp = time(); // needs to be in UTC. Make sure webserver produces UTC
+
+  // The values that contribute to x_fp_hash
+  $hmac_data = $x_login . "^" . $x_fp_sequence . "^" . $x_fp_timestamp . "^" . $x_amount . "^" . $x_currency_code;
+  $x_fp_hash = hash_hmac('MD5', $hmac_data, $transaction_key);
+
+  $content = '<div class="progress" style="width: 60%">
+  <div class="progress-bar progress-bar-info active progress-bar-striped" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%">Processing Please Wait...
+  </div>
+</div>';
+
+  // required fields
+  $content .= '<form action="https://demo.globalgatewaye4.firstdata.com/pay" method="POST" name="myForm" id="myForm">';
+
+  $content .= '<div class="form-group">';
+  $content .= '<input class="form-control" name="x_login" value="' . $x_login . '" type="text">';
+  $content .= '<input class="form-control" name="x_amount" value="' . $x_amount . '" type="text">';
+  $content .= '<input class="form-control" name="x_fp_sequence" value="' . $x_fp_sequence . '" type="text">';
+  $content .= '<input class="form-control" name="x_fp_timestamp" value="' . $x_fp_timestamp . '" type="text">';
+  $content .= '<input class="form-control" name="x_fp_hash" value="' . $x_fp_hash . '" size="50" type="text">';
+  $content .= '<input class="form-control" name="x_currency_code" value="' . $x_currency_code . '" type="text">';
+  $content .= '<input class="form-control" type="text" name="x_show_form" value="PAYMENT_FORM"/>';
+
+  // fastlane fields
+  $content .= '<input class="form-control" type="text" name="x_logo_url" value="http://fastlanemotorcyclerentals.com/files/files/logo/logo.svg"/>';
+  $content .= '<input class="form-control" type="text" name="x_invoice_num" value="' . $invoice_number . '"/>';
+
+  $content .= '<input class="form-control" name="x_line_item" value="' . $motorcycle_line_item . '"/>';
+
+  $content .= '<input class="form-control" name="x_line_item" value="' . $delivery_line_item . '"/>';
+
+  $content .= '<input class="form-control" name="x_line_item" value="' . $tax_line_item . '"/>';
+
+  // $content .= '<input class="form-control" name="x_line_item" value="' . $delivery_line_item .'" type="text" />';
+
+  //$content .= '<input class="form-control" name="x_line_item" value="' . $tax_line_item . '"/>';
+
+  $content .= '<input class="form-control" type="text" name="x_first_name" value="' . $first_name . '"/>';
+  $content .= '<input class="form-control" type="text" name="x_last_name" value="' . $last_name . '"/>';
+  $content .= '<input class="form-control" type="text" name="x_address" value="' . $address . '"/>';
+  $content .= '<input class="form-control" type="text" name="x_city" value="' . $city . '"/>';
+  $content .= '<input class="form-control" type="text" name="x_state" value="' . $state . '"/>';
+  $content .= '<input class="form-control" type="text" name="x_zip" value="' . $zip . '"/>';
+  $content .= '<input class="form-control" type="text" name="x_country" value="' . $country . '"/>';
+  $content .= '<input class="form-control" type="text" name="x_phone" value="' . $phone . '"/>';
+  $content .= '<input class="form-control" type="text" name="x_email" value="' . $email . '"/>';
+
+  $content .= '</div>';
+  $content .= '<button type="submit" class="btn btn-success">Submit</button>';
+
+  // create parameters input in html
+  foreach ($_POST as $a => $b) {
+    $content .= "<input type='text' name='". htmlentities($a) ."' value='". htmlentities($b) ."'>";
+  }
+
+  $content .= '</form>';
+
+  $content .= '<script type="text/javascript">document.myForm.submit();</script>';
+
+  return $content;
+
+
+
+//   echo '<h1>Processing Please Wait...</h1>';
+//   echo '<form action="https://demo.globalgatewaye4.firstdata.com/pay" method="POST" name="myForm" id="myForm">';
+
+//   $x_login = "HCO-FREEL-525"; // Take from Payment Page ID in Payment Pages interface
+//   $transaction_key = "Ibow1_b7G52nAoEyKtHn"; // Take from Payment Pages configuration interface
+//   $x_amount = $_POST["x_amount"];
+//   $x_currency_code = "USD"; // Needs to agree with the currency of the payment page
+// srand(time()); // initialize random generator for x_fp_sequence
+//   $x_fp_sequence = rand(1000, 100000) + 123456;
+//   $x_fp_timestamp = time(); // needs to be in UTC. Make sure webserver produces UTC
+
+//   // The values that contribute to x_fp_hash
+//   $hmac_data = $x_login . "^" . $x_fp_sequence . "^" . $x_fp_timestamp . "^" . $x_amount . "^" . $x_currency_code;
+//   $x_fp_hash = hash_hmac('MD5', $hmac_data, $transaction_key);
+
+//   echo ('<input name="x_login" value="' . $x_login . '" type="text">' );
+//   echo ('<input name="x_amount" value="' . $x_amount . '" type="text">' );
+//   echo ('<input name="x_fp_sequence" value="' . $x_fp_sequence . '" type="text">' );
+//   echo ('<input name="x_fp_timestamp" value="' . $x_fp_timestamp . '" type="text">' );
+//   echo ('<input name="x_fp_hash" value="' . $x_fp_hash . '" size="50" type="text">' );
+//   echo ('<input name="x_currency_code" value="' . $x_currency_code . '" type="text">');
+
+//   // create parameters input in html
+//   foreach ($_POST as $a => $b) {
+//     echo "<input type='text' name='". htmlentities($a) ."' value='". htmlentities($b) ."'>";
+//   }
+
+//   echo '</form>';
+
+}
+
+
+/**
  * Implements hook_views_api().
  */
 function fastlane_views_api() {
@@ -30,32 +249,32 @@ function fastlane_form_alter(&$form, &$form_state, $form_id) {
      *  TODO: Validate delivery times
      ******************************************************************/
 
-    $form['delivery_time'] = array(
-       '#type' => 'select',
-       '#title' => t('Delivery and pickup time,'),
-       '#options' => array(
-          '0700' => t('07:00 am'),
-          '0800' => t('08:00 am'),
-          '0900' => t('09:00 am'),
-          '1000' => t('10:00 am'),
-          '1100' => t('11:00 am'),
-          '1200' => t('12:00 pm'),
-          '1300' => t('01:00 pm'),
-          '1400' => t('02:00 pm'),
-          '1500' => t('03:00 pm'),
-          '1600' => t('04:00 pm'),
-          '1700' => t('05:00 pm'),
-          '1800' => t('06:00 pm'),
-          '1900' => t('07:00 pm'),
-          '2000' => t('08:00 pm'),
-          '2100' => t('09:00 pm'),
-          '2200' => t('10:00 pm'),
-       ),
-       // '#default_value' => $category['selected'],
-       '#required' => TRUE,
-       '#description' => t('Select delivery and pick up time'),
-       '#weight' => '0',
-    );
+    // $form['delivery_time'] = array(
+    //    '#type' => 'select',
+    //    '#title' => t('Delivery and pickup time,'),
+    //    '#options' => array(
+    //       '0700' => t('07:00 am'),
+    //       '0800' => t('08:00 am'),
+    //       '0900' => t('09:00 am'),
+    //       '1000' => t('10:00 am'),
+    //       '1100' => t('11:00 am'),
+    //       '1200' => t('12:00 pm'),
+    //       '1300' => t('01:00 pm'),
+    //       '1400' => t('02:00 pm'),
+    //       '1500' => t('03:00 pm'),
+    //       '1600' => t('04:00 pm'),
+    //       '1700' => t('05:00 pm'),
+    //       '1800' => t('06:00 pm'),
+    //       '1900' => t('07:00 pm'),
+    //       '2000' => t('08:00 pm'),
+    //       '2100' => t('09:00 pm'),
+    //       '2200' => t('10:00 pm'),
+    //    ),
+    //    // '#default_value' => $category['selected'],
+    //    '#required' => TRUE,
+    //    '#description' => t('Select delivery and pick up time'),
+    //    '#weight' => '0',
+    // );
 
   } // $form_id == 'availability_calendar_booking_formlet_form')
 
@@ -88,6 +307,7 @@ function fastlane_form_alter(&$form, &$form_state, $form_id) {
       // If for some reason the user isn't logged then redirect to motorcycles pages
       if ($user_fields->uid != 0) {
 
+        $customer_id = $user_fields->uid;
         $email = $user_fields->mail;
         $first_name = $user_fields->field_address['und'][0]['first_name'];
         $last_name = $user_fields->field_address['und'][0]['last_name'];
@@ -123,20 +343,25 @@ function fastlane_form_alter(&$form, &$form_state, $form_id) {
       // dynamic values
       $form['submitted']['rental_details']['deliver_pickup_time']['#default_value'] = $delivery_time;
 
-      $form['submitted']['duration']['#default_value'] = $duration;
+      // $form['submitted']['duration']['#default_value'] = $duration;
 
-       // contact fieldset
-        $form['submitted']['contact']['first_name']['#default_value'] = $first_name;
-        $form['submitted']['contact']['last_name']['#default_value'] = $last_name;
-        $form['submitted']['contact']['email']['#default_value'] = $email;
-        $form['submitted']['contact']['phone_number']['#default_value'] = $phone_number;
+     // contact fieldset
+      $form['submitted']['contact']['first_name']['#default_value'] = $first_name;
+      $form['submitted']['contact']['last_name']['#default_value'] = $last_name;
+      $form['submitted']['contact']['email']['#default_value'] = $email;
+      $form['submitted']['contact']['phone_number']['#default_value'] = $phone_number;
 
-        // delivery_address fieldset
-        $form['submitted']['delivery_address']['address_1']['#default_value'] = $address_1;
-        $form['submitted']['delivery_address']['address_2']['#default_value'] = $address_2;
-        $form['submitted']['delivery_address']['city']['#default_value'] = $city;
-        $form['submitted']['delivery_address']['state']['#default_value'] = $state;
-        $form['submitted']['delivery_address']['zip_code']['#default_value'] = $zip_code;
+      // delivery_address fieldset
+      $form['submitted']['delivery_address']['address_1']['#default_value'] = $address_1;
+      $form['submitted']['delivery_address']['address_2']['#default_value'] = $address_2;
+      $form['submitted']['delivery_address']['city']['#default_value'] = $city;
+      $form['submitted']['delivery_address']['state']['#default_value'] = $state;
+      $form['submitted']['delivery_address']['zip_code']['#default_value'] = $zip_code;
+
+      // private fields
+      $form['submitted']['private_fields']['customer_id']['#default_value'] = $customer_id;
+      $form['submitted']['private_fields']['duration']['#default_value'] = $duration;
+
 
         /*
           calculate the delivery fee.
@@ -174,7 +399,7 @@ function fastlane_form_alter(&$form, &$form_state, $form_id) {
         }
 
         else {
-          $delivery_fee = NULL;
+          $delivery_fee = 0;
           $delivery_fee_display = t('We will contact you regarding the delivery fee');
           $delivery_fee_flag = TRUE;
         }
@@ -191,20 +416,20 @@ function fastlane_form_alter(&$form, &$form_state, $form_id) {
         */
 
         $rental_rate = 250;
-        $rental_rate_display = '$' . number_format($rental_rate,2);
+        $rental_rate_display = number_format($rental_rate,2);
         $total_rental = ($duration*$rental_rate);
-        $total_rental_display = '$' . number_format($total_rental,2);
+        $total_rental_display = number_format($total_rental,2);
         $taxable_total = ($total_rental+$delivery_fee);
-        $taxable_total_display = '$' . number_format($taxable_total,2);
+        $taxable_total_display = number_format($taxable_total,2);
         $tax = ($taxable_total*07)/100;
-        $tax_display = '$' . number_format($tax,2);
+        $tax_display = number_format($tax,2);
         $total_amount = ($taxable_total+$tax);
-        $total_amount_display = '$' . number_format($total_amount,2);
+        $total_amount_display = number_format($total_amount,2);
 
 
         // set payment field values
         $form['submitted']['rates_fees']['delivery_distance']['#default_value'] = $delivery_distance_display;
-        $form['submitted']['rates_fees']['delivery_fee']['#default_value'] = $delivery_fee_display;
+        $form['submitted']['rates_fees']['delivery_fee']['#default_value'] = $delivery_fee;
 
         $form['submitted']['rates_fees']['rental_rate']['#default_value'] = $rental_rate_display;
         $form['submitted']['rates_fees']['duration']['#default_value'] = $duration_display;
