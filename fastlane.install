@@ -20,9 +20,8 @@ function fastlane_schema() {
     'description' => 'Stores available times for motorcycle rentals',
     'fields' => array(
       'tid' => array(
-        'type' => 'int',
+        'type' => 'serial',
         'not null' => TRUE,
-        'default' => 0,
         'description' => "The unique identifier for available time submission",
       ),
       'cid' => array(
