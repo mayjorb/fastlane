@@ -1,18 +1,18 @@
 <?php
 
+
 /**
  * @file
  * General functions and hook implementations.
+ *
  * Zip codes pulled from http://www.nycbynatives.com/nyc_info/new_york_city_zip_codes.php
  *
  */
-
 /**
  * Implements hook_menu().
  */
 function fastlane_menu() {
   $items = array();
-
   $items['payeezy'] = array(
     'title' => 'Payeezy Gateway Post',
     'description' => 'Payeezy POST.',
@@ -40,6 +40,7 @@ function fastlane_payeezy_post_callback() {
   $content = t('you have arrived the payeezy way');
   $content .= t('Tame the query string!');
 
+  return $content;
 }
 
 /**
@@ -64,14 +65,14 @@ function fastlane_payeezy_form_callback() {
 
   $node = node_load($my_webform_nid);
   $nodes = array($node->nid => $node);
-  webform_node_load($nodes,array('webform'));
+  webform_node_load($nodes, array('webform'));
 
   $components = $nodes[$node->nid]->webform['components'];
-  $data = webform_menu_submission_load($my_sid,$my_webform_nid)->data;
+  $data = webform_menu_submission_load($my_sid, $my_webform_nid)->data;
   //dpm($components = $nodes[$node->nid]->webform['components'], '$components');
   //dpm($data = webform_menu_submission_load($my_sid,$my_webform_nid)->data, '$data');
 
-  // set easy to remember vars from data array
+  // Set easy to remember vars from data array.
   $customer_id = $data[55][0];
   $first_name = $data[2][0];
   $last_name = $data[3][0];
@@ -83,13 +84,13 @@ function fastlane_payeezy_form_callback() {
   $zip = $data[15][0];
   $country = 'United States';
 
-  //$rental_total = $data[46][0];
+  // $rental_total = $data[46][0];
   $daily_rental_fee = '250.00';
   $sub_total = $data[50][0];
   $tax_total = $data[49][0];
   $grand_total = $data[51][0];
-  $delivery_fee = $data[48][0];
-  $delivery_fee_display = 'Delivery fee';
+  $delivery_fee = $data[58][0];
+  $delivery_fee_display = $data[48][0];
   //dpm($delivery_fee, '$delivery_fee');
   $tax_amount_display = $data[49][0];
 
@@ -99,39 +100,39 @@ function fastlane_payeezy_form_callback() {
   $description = 'motorcycle rental';
   $duration = $data[57][0];
 
-  //$delivery_fee = 0;
-
-  // dpm($data);
-  // dpm($duration, '$duration');
-
   $motorcycle_line_item = $bike_id . '<|>' . $motorcycle . '<|>' .   $motorcycle . ' ' . $description . '<|>' . $duration  . '<|>' . $daily_rental_fee . '<|>YES';
 
-  // $delivery_line_item = // df<|>35<|>NYC Delivery fee<|>1<|>35<|>YES";
-  //$tax_line_item = //value="1<|>2016 Indian<|>One baddass bike<|>1<|>250.00<|>YES" type="text" />';
+  $delivery_line_item = '1<|>Delivery fee<|>' .  $delivery_fee_display . '<|>1<|>' . $delivery_fee . '<|>YES';
 
-  $delivery_line_item = 'df<|>Delivery fee<|>' .  $delivery_fee_display . '<|>1<|>' . $delivery_fee . '<|>YES';
-
-  //$delivery_line_item = trim('df<|>Delivery fee<|>' . $delivery_fee_display . '<|>1<|>' . $delivery_fee . '<|>YES');
-
-  //$tax_line_item = 'tx<|>Delivery fee<|>TBD<|>1<|>' . $tax_total . '<|>YES';
-  $tax_line_item = 'tx<|>NJ Tax<|>New Jesey tax 7%<|>1<|>' . $tax_total . '<|>NO';
-
-  dpm($motorcycle_line_item, '$motorcycle_line_item');
-  dpm($delivery_line_item, '$delivery_line_item');
-  dpm($tax_line_item, 'tax line item');
+  $tax_line_item = '2<|>NJ Tax<|>New Jersey tax 7%<|>1<|>' . $tax_total . '<|>YES';
 
   // generate invoice number 2016-01-03 40-1
   $invoice_number = date('Y-m-d') . ' ' . $my_sid . '-' . $customer_id ;
 
+
   // fields required for payeezy gateway
-  $x_login = "HCO-FREEL-525"; // Take from Payment Page ID in Payment Pages interface
-  $transaction_key = "Ibow1_b7G52nAoEyKtHn"; // Take from Payment Pages configuration interface
+  // LIVE
+  $x_login = "WSP-FASTL-AzuKKABdhg"; // Take from Payment Page ID in Payment Pages interface
+  $transaction_key = "Xl~6o4RNFSEcsp4WZ8p7"; // Take from Payment Pages configuration interface
+
+  // set to FALSE for REAL transactions
+  // $x_test_request = FALSE;
+  $x_test_request = TRUE;
+  // LIVE
+
+  // DEV - comment to use LIVE
+  // $x_login = "HCO-FREEL-525"; // Take from Payment Page ID in Payment Pages interface
+  // $transaction_key = "Ibow1_b7G52nAoEyKtHn"; // Take from Payment Pages configuration interface
+  // DEV
+
   $x_amount = $grand_total;
   // $x_amount = $_POST["x_amount"];
-  $x_currency_code = "USD"; // Needs to agree with the currency of the payment page
-srand(time()); // initialize random generator for x_fp_sequence
+
+  // Needs to agree with the currency of the payment page.
+  $x_currency_code = "USD";
+  srand(time()); // initialize random generator for x_fp_sequence
   $x_fp_sequence = rand(1000, 100000) + 123456;
-  $x_fp_timestamp = time(); // needs to be in UTC. Make sure webserver produces UTC
+  $x_fp_timestamp = time(); // Needs to be in UTC. Make sure webserver produces UTC.
 
   // The values that contribute to x_fp_hash
   $hmac_data = $x_login . "^" . $x_fp_sequence . "^" . $x_fp_timestamp . "^" . $x_amount . "^" . $x_currency_code;
@@ -142,48 +143,49 @@ srand(time()); // initialize random generator for x_fp_sequence
   </div>
 </div>';
 
-  // required fields
-  $content .= '<form action="https://demo.globalgatewaye4.firstdata.com/pay" method="POST" name="myForm" id="myForm">';
+  // Required fields.
+  // LIVE.
+  $content .= '<form action="https://globalgatewaye4.firstdata.com/pay" method="POST" name="myForm" id="myForm">';
+
+  // DEV
+  // $content .= '<form action="https://demo.globalgatewaye4.firstdata.com/pay" method="POST" name="myForm" id="myForm">';
 
   $content .= '<div class="form-group">';
-  $content .= '<input class="form-control" name="x_login" value="' . $x_login . '" type="text">';
-  $content .= '<input class="form-control" name="x_amount" value="' . $x_amount . '" type="text">';
-  $content .= '<input class="form-control" name="x_fp_sequence" value="' . $x_fp_sequence . '" type="text">';
-  $content .= '<input class="form-control" name="x_fp_timestamp" value="' . $x_fp_timestamp . '" type="text">';
-  $content .= '<input class="form-control" name="x_fp_hash" value="' . $x_fp_hash . '" size="50" type="text">';
-  $content .= '<input class="form-control" name="x_currency_code" value="' . $x_currency_code . '" type="text">';
-  $content .= '<input class="form-control" type="text" name="x_show_form" value="PAYMENT_FORM"/>';
+  $content .= '<input class="form-control" name="x_login" value="' . $x_login . '" type="hidden">';
+  $content .= '<input class="form-control" name="x_amount" value="' . $x_amount . '" type="hidden">';
+  $content .= '<input class="form-control" name="x_fp_sequence" value="' . $x_fp_sequence . '" type="hidden">';
+  $content .= '<input class="form-control" name="x_fp_timestamp" value="' . $x_fp_timestamp . '" type="hidden">';
+  $content .= '<input class="form-control" name="x_fp_hash" value="' . $x_fp_hash . '" size="50" type="hidden">';
+  $content .= '<input class="form-control" name="x_currency_code" value="' . $x_currency_code . '" type="hidden">';
+  $content .= '<input class="form-control" type="hidden" name="x_show_form" value="PAYMENT_FORM"/>';
 
-  // fastlane fields
-  $content .= '<input class="form-control" type="text" name="x_logo_url" value="http://fastlanemotorcyclerentals.com/files/files/logo/logo.svg"/>';
-  $content .= '<input class="form-control" type="text" name="x_invoice_num" value="' . $invoice_number . '"/>';
+  // Fastlane fields.
+  $content .= '<input class="form-control" type="hidden" name="x_logo_url" value="https://fastlanemotorcyclerentals.com/files/files/logo/logo.svg"/>';
 
-  $content .= '<input class="form-control" name="x_line_item" value="' . $motorcycle_line_item . '"/>';
+  $content .= '<input class="form-control" type="hidden" name="x_invoice_num" value="' . $invoice_number . '"/>';
 
-  $content .= '<input class="form-control" name="x_line_item" value="' . $delivery_line_item . '"/>';
+  $content .= '<input class="form-control" type="hidden" name="x_line_item" value="' . $motorcycle_line_item . '"/>';
 
-  $content .= '<input class="form-control" name="x_line_item" value="' . $tax_line_item . '"/>';
+  $content .= '<input class="form-control" type="hidden" name="x_line_item" value="' . $delivery_line_item . '"/>';
 
-  // $content .= '<input class="form-control" name="x_line_item" value="' . $delivery_line_item .'" type="text" />';
+  $content .= '<input class="form-control" type="hidden" name="x_line_item" value="' . $tax_line_item . '"/>';
 
-  //$content .= '<input class="form-control" name="x_line_item" value="' . $tax_line_item . '"/>';
-
-  $content .= '<input class="form-control" type="text" name="x_first_name" value="' . $first_name . '"/>';
-  $content .= '<input class="form-control" type="text" name="x_last_name" value="' . $last_name . '"/>';
-  $content .= '<input class="form-control" type="text" name="x_address" value="' . $address . '"/>';
-  $content .= '<input class="form-control" type="text" name="x_city" value="' . $city . '"/>';
-  $content .= '<input class="form-control" type="text" name="x_state" value="' . $state . '"/>';
-  $content .= '<input class="form-control" type="text" name="x_zip" value="' . $zip . '"/>';
-  $content .= '<input class="form-control" type="text" name="x_country" value="' . $country . '"/>';
-  $content .= '<input class="form-control" type="text" name="x_phone" value="' . $phone . '"/>';
-  $content .= '<input class="form-control" type="text" name="x_email" value="' . $email . '"/>';
+  $content .= '<input class="form-control" type="hidden" name="x_first_name" value="' . $first_name . '"/>';
+  $content .= '<input class="form-control" type="hidden" name="x_last_name" value="' . $last_name . '"/>';
+  $content .= '<input class="form-control" type="hidden" name="x_address" value="' . $address . '"/>';
+  $content .= '<input class="form-control" type="hidden" name="x_city" value="' . $city . '"/>';
+  $content .= '<input class="form-control" type="hidden" name="x_state" value="' . $state . '"/>';
+  $content .= '<input class="form-control" type="hidden" name="x_zip" value="' . $zip . '"/>';
+  $content .= '<input class="form-control" type="hidden" name="x_country" value="' . $country . '"/>';
+  $content .= '<input class="form-control" type="hidden" name="x_phone" value="' . $phone_number . '"/>';
+  $content .= '<input class="form-control" type="hidden" name="x_email" value="' . $email . '"/>';
 
   $content .= '</div>';
-  $content .= '<button type="submit" class="btn btn-success">Submit</button>';
+  $content .= '<button type="submit" class="btn btn-success">Continue</button>';
 
-  // create parameters input in html
+  // Create parameters input in html.
   foreach ($_POST as $a => $b) {
-    $content .= "<input type='text' name='". htmlentities($a) ."' value='". htmlentities($b) ."'>";
+    $content .= "<input type='text' name='" . htmlentities($a) . "' value='" . htmlentities($b) . "'>";
   }
 
   $content .= '</form>';
@@ -191,37 +193,6 @@ srand(time()); // initialize random generator for x_fp_sequence
   $content .= '<script type="text/javascript">document.myForm.submit();</script>';
 
   return $content;
-
-
-
-//   echo '<h1>Processing Please Wait...</h1>';
-//   echo '<form action="https://demo.globalgatewaye4.firstdata.com/pay" method="POST" name="myForm" id="myForm">';
-
-//   $x_login = "HCO-FREEL-525"; // Take from Payment Page ID in Payment Pages interface
-//   $transaction_key = "Ibow1_b7G52nAoEyKtHn"; // Take from Payment Pages configuration interface
-//   $x_amount = $_POST["x_amount"];
-//   $x_currency_code = "USD"; // Needs to agree with the currency of the payment page
-// srand(time()); // initialize random generator for x_fp_sequence
-//   $x_fp_sequence = rand(1000, 100000) + 123456;
-//   $x_fp_timestamp = time(); // needs to be in UTC. Make sure webserver produces UTC
-
-//   // The values that contribute to x_fp_hash
-//   $hmac_data = $x_login . "^" . $x_fp_sequence . "^" . $x_fp_timestamp . "^" . $x_amount . "^" . $x_currency_code;
-//   $x_fp_hash = hash_hmac('MD5', $hmac_data, $transaction_key);
-
-//   echo ('<input name="x_login" value="' . $x_login . '" type="text">' );
-//   echo ('<input name="x_amount" value="' . $x_amount . '" type="text">' );
-//   echo ('<input name="x_fp_sequence" value="' . $x_fp_sequence . '" type="text">' );
-//   echo ('<input name="x_fp_timestamp" value="' . $x_fp_timestamp . '" type="text">' );
-//   echo ('<input name="x_fp_hash" value="' . $x_fp_hash . '" size="50" type="text">' );
-//   echo ('<input name="x_currency_code" value="' . $x_currency_code . '" type="text">');
-
-//   // create parameters input in html
-//   foreach ($_POST as $a => $b) {
-//     echo "<input type='text' name='". htmlentities($a) ."' value='". htmlentities($b) ."'>";
-//   }
-
-//   echo '</form>';
 
 }
 
@@ -316,8 +287,8 @@ function fastlane_form_alter(&$form, &$form_state, $form_id) {
         $address_2 = $user_fields->field_address['und'][0]['premise']; // address 2
         $city = $user_fields->field_address['und'][0]['locality']; // city
         $state = $user_fields->field_address['und'][0]['administrative_area']; // state
-        $zip_code = $user_fields->field_address['und'][0]['postal_code']; // zipcode
-        // $zip_code = '10103'; // zipcode test if in NYC
+        //$zip_code = $user_fields->field_address['und'][0]['postal_code']; // zipcode
+        $zip_code = '10103'; // zipcode test if in NYC
         $geolocation = $user_fields->field_geofield['und'][0]['geom']; // geofield (POINT (-104.803022838.8879924)
 
         // get proximity of user from resource, set value and display text
@@ -330,7 +301,7 @@ function fastlane_form_alter(&$form, &$form_state, $form_id) {
         // convert military time standard time
         $delivery_time = date("g:i a", strtotime($delivery_time));
 
-       $duration = ($query_parameters['duration'] - 1); // when choosing day vs over-night the duration is inflated by 1
+        $duration = ($query_parameters['duration'] - 1); // when choosing day vs over-night the duration is inflated by 1
 
        if ($duration > 1) {
         $duration_display = t($duration . ' days');
@@ -358,10 +329,6 @@ function fastlane_form_alter(&$form, &$form_state, $form_id) {
       $form['submitted']['delivery_address']['state']['#default_value'] = $state;
       $form['submitted']['delivery_address']['zip_code']['#default_value'] = $zip_code;
 
-      // private fields
-      $form['submitted']['private_fields']['customer_id']['#default_value'] = $customer_id;
-      $form['submitted']['private_fields']['duration']['#default_value'] = $duration;
-
 
         /*
           calculate the delivery fee.
@@ -382,7 +349,7 @@ function fastlane_form_alter(&$form, &$form_state, $form_id) {
        // If it's a NYC zipcode, $35 charge
         if (stristr($nyc_zipcodes, $zip_code)) {
           $delivery_fee = 35;
-          $delivery_fee_display = t('New York City delivery/pickup fee: $35.00');
+          $delivery_fee_display = t('New York City delivery/pickup fee');
           $delivery_fee_flag = FALSE;
         }
 
@@ -429,7 +396,7 @@ function fastlane_form_alter(&$form, &$form_state, $form_id) {
 
         // set payment field values
         $form['submitted']['rates_fees']['delivery_distance']['#default_value'] = $delivery_distance_display;
-        $form['submitted']['rates_fees']['delivery_fee']['#default_value'] = $delivery_fee;
+        $form['submitted']['rates_fees']['delivery_fee']['#default_value'] = $delivery_fee_display;
 
         $form['submitted']['rates_fees']['rental_rate']['#default_value'] = $rental_rate_display;
         $form['submitted']['rates_fees']['duration']['#default_value'] = $duration_display;
@@ -438,6 +405,11 @@ function fastlane_form_alter(&$form, &$form_state, $form_id) {
         $form['submitted']['rates_fees']['subtotal']['#default_value'] = $taxable_total_display;
         $form['submitted']['rates_fees']['tax']['#default_value'] = $tax_display;
         $form['submitted']['rates_fees']['total_cost']['#default_value'] = $total_amount_display;
+
+        // private fields
+        $form['submitted']['private_fields']['customer_id']['#default_value'] = $customer_id;
+        $form['submitted']['private_fields']['duration']['#default_value'] = $duration;
+        $form['submitted']['private_fields']['df_amount']['#default_value'] = $delivery_fee;
 
 
         // $form['delivery_fee_flag'] = array(
@@ -518,3 +490,136 @@ function fastlane_webform_submission_insert($node, $submission) {
   // drupal_set_message('pick-up date = ' . $submission->data[29][0]);
   // drupal_set_message('calendar id = ' . $submission->data[30][0]);
 }
+
+
+function available_times_test($start_hour, $end_hour, $cleanup) {
+  $delivery_hours = array(
+    '9:00am'    => '0900',
+    '10:00am'   => '1000',
+    '11:00am'   => '1100',
+    '12:00pm'   => '1200',
+    '1:00pm'    => '1300',
+    '2:00pm'    => '1400',
+    '3:00pm'    => '1500',
+    '4:00pm'    => '1600',
+    '5:00pm'    => '1700',
+    '6:00pm'    => '1800',
+    '7:00pm'    => '1900',
+    '8:00pm'    => '2000',
+    '9:00pm'    => '2100');
+
+  foreach ($delivery_hours as $key => $value) {
+    // Remove hours before the start time
+    if ($start_hour > $value) {
+      unset($delivery_hours[$key]);
+    }
+    // Remove hours after the end time
+    if ($end_hour < $value) {
+      unset($delivery_hours[$key]);
+    }
+  }
+  return $delivery_hours;
+}
+
+
+// sprintf() adds a leading zero to the hour string if needed
+$cleanup_hours = sprintf('%04d', '0200'); // Need  2 hours between deliveries
+$start_hour = sprintf('%04d', '0300'); // from sql query
+$end_hour = sprintf('%04d', '2300'); // from sql query
+
+$start_hour = $start_hour + $cleanup_hours;
+$end_hour = $end_hour - $cleanup_hours;
+
+$select_list = available_times($start_hour, $end_hour);
+
+
+/**
+ * Define callbacks that can be used as select list options.
+ *
+ * When users create a select component, they may select a pre-built list of
+ * certain options. Webform core provides a few of these lists such as the
+ * United States, countries of the world, and days of the week. This hook
+ * provides additional lists that may be utilized.
+ *
+ * @see webform_options_example()
+ * @see hook_webform_select_options_info_alter()
+ *
+ * @return
+ *   An array of callbacks that can be used for select list options. This array
+ *   should be keyed by the "name" of the pre-defined list. The values should
+ *   be an array with the following additional keys:
+ *     - title: The translated title for this list.
+ *     - options callback: The name of the function that will return the list.
+ *     - options arguments: Any additional arguments to send to the callback.
+ *     - file: Optional. The file containing the options callback, relative to
+ *       the module root.
+ */
+function fastlane_webform_select_options_info() {
+  $items = array();
+
+  $items['available_times'] = array(
+    'title' => t('Delivery times'),
+    'options callback' => 'available_times',
+    'options arguments' => array(
+      'start_hour' => t($start_hour),
+      'end_hour' => t($end_hour),
+      'start_hour' => t($cleanup_hours),
+    ),
+  );
+    //dpm($items, '$items');
+  return $items;
+}
+
+/**
+ * Option list containing the days of the week.
+ */
+function available_times($component, $flat, $arguments) {
+  $delivery_hours = array(
+    '0900' => t('9:00am'),
+    '1000' => t('10:00am'),
+    '1100' => t('11:00am'),
+    '1200' => t('12:00pm'),
+    '1300' => t('1:00pm'),
+    '1400' => t('2:00pm'),
+    '1500' => t('3:00pm'),
+    '1600' => t('4:00pm'),
+    '1700' => t('5:00pm'),
+    '1800' => t('6:00pm'),
+    '1900' => t('7:00pm'),
+    '2000' => t('8:00pm'),
+    '2100' => t('9:00pm'),
+    '2200' => t('10:00pm'),
+  );
+
+  // sprintf() adds a leading zero to the hour string if needed
+  $cleanup_hours = sprintf('%04d', '0200'); // Need  2 hours between deliveries
+  $start_hour = sprintf('%04d', '0300'); // from sql query
+  $end_hour = sprintf('%04d', '2300'); // from sql query
+
+  $start_hour = sprintf('%04d', ($start_hour + $cleanup_hours));
+  $end_hour = sprintf('%04d', ($end_hour - $cleanup_hours));
+//dpm($start_hour, 'start hour');
+//dpm($end_hour, 'end hour');
+
+  foreach ($delivery_hours as $key => $value) {
+    //echo  $start_hour . "start hour = " . $key . ", value=" . $value;
+    //echo "<br>";
+    // Remove hours before the start time
+    if ($start_hour > $key) {
+      unset($delivery_hours[$key]);
+    }
+    // Remove hours after the end time
+    if ($end_hour < $key) {
+      unset($delivery_hours[$value]);
+    }
+  }
+
+  //print_r($delivery_hours);
+
+  return $delivery_hours;
+
+}
+
+$select_list = available_times($start_hour, $end_hour);
+
+//dpm($delivery_hours, '$delivery_hours');

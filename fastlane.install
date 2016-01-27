@@ -1,0 +1,119 @@
+<?php
+/**
+ * @file
+ * Install, update and uninstall functions for the fastlane module.
+ */
+
+/**
+ * Implements hook_schema().
+ *
+ * Defines the database tables used by this module.
+ * Remember that the easiest way to create the code for hook_schema is with
+ * the @link http://drupal.org/project/schema schema module @endlink
+ *
+ * @see hook_schema()
+ * @ingroup dbtng_example
+ */
+function fastlane_schema() {
+
+  $schema['fastlane_dp_times'] = array(
+    'description' => 'Stores available times for motorcycle rentals',
+    'fields' => array(
+      'tid' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => "The unique identifier for available time submission",
+      ),
+      'cid' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => "The primary identifier for an availability calendar",
+      ),
+      'sid' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => "The unique identifier for the webform submission",
+      ),
+      'created' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => "The Unix timestamp when the delivery/pickup time was created",
+      ),
+      'changed' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => "The Unix timestamp when the delivery/pickup time was last updated",
+      ),
+      'dp_time' => array(
+        'type' => 'varchar',
+        'length' => 4,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'The delivery and pickup time for a rental (24 hour time format).',
+      ),
+      // [#747036]: using date instead of separate fields allows for better querying.
+      // [#1083198]: Mysql, pgsql, mssql, and Oracle support the DATE type, but
+      //   this is not a type supported by Drupal, so specify per supported
+      //   database. Sqlite uses TEXT as type but has a lot of date functions.
+      // 'yyyy-mm-dd' (iso 8601) is accepted by mysql, pgsql, mssql, and sqlite
+      //   to specify DATE's. For Oracle I could not find this information.
+      // The 'between' operator is inclusive on both sides on all databases:
+      //   date between from and to  <=>  from <= date and date <= to.
+      'deliver_date' => array(
+        'mysql_type' => 'DATE',
+        'pgsql_type' => 'DATE',
+        'sqlsrv_type' => 'DATE',
+        'oracle_type' => 'DATE',
+        'sqlite_type' => 'TEXT',
+        'type' => 'char',
+        'length' => '10',
+        'not null' => TRUE,
+        'description' => 'The delivery date for rental.',
+      ),
+      'pickup_date' => array(
+        'mysql_type' => 'DATE',
+        'pgsql_type' => 'DATE',
+        'sqlsrv_type' => 'DATE',
+        'oracle_type' => 'DATE',
+        'sqlite_type' => 'TEXT',
+        'type' => 'char',
+        'length' => '10',
+        'not null' => TRUE,
+        'description' => 'The pickup date for rental.',
+      ),
+    ),
+    'primary key' => array('tid'),
+    'indexes' => array(
+      'cid'    => array('cid'),
+      'sid' => array('sid'),
+    ),
+  );
+  return $schema;
+}
+
+function fastlane_install() {
+  drupal_set_message( t('Fastlane fastlane_dp_times schema installed') );
+}
+
+function fastlane_uninstall() {
+  drupal_set_message( t('Fastlane fastlane_dp_times schema uninstalled (removed)') );
+}
+
+
+
+
+/**
+  * Implement hook_enable()
+  */
+// function fastlane_enable() {
+//   //Check if table exists, if not install the schema.
+//   if (db_table_exists('fastlane_dp_times') == FALSE) {
+//     drupal_install_schema('fastlane_dp_times');
+//     drupal_set_message( t('Fastlane fastlane_dp_times schema installed') );
+//   }
+// }
