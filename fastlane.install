@@ -49,8 +49,7 @@ function fastlane_schema() {
         'description' => "The Unix timestamp when the delivery/pickup time was last updated",
       ),
       'dp_time' => array(
-        'type' => 'varchar',
-        'length' => 4,
+        'type' => 'int',
         'not null' => TRUE,
         'default' => 0,
         'description' => 'The delivery and pickup time for a rental (24 hour time format).',

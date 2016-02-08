@@ -190,7 +190,7 @@ function fastlane_payeezy_form_callback() {
 
   $content .= '</form>';
 
-  $content .= '<script type="text/javascript">document.myForm.submit();</script>';
+  //$content .= '<script type="text/javascript">document.myForm.submit();</script>';
 
   return $content;
 
@@ -213,39 +213,6 @@ function fastlane_form_alter(&$form, &$form_state, $form_id) {
 
   if ($form_id == 'availability_calendar_booking_formlet_form') {
 
-    //dpm($form, 'form array');
-     /******************************************************************
-     *  availability calendar booking formlet overrides
-     *  Add delivery time field
-     *  TODO: Validate delivery times
-     ******************************************************************/
-
-    // $form['delivery_time'] = array(
-    //    '#type' => 'select',
-    //    '#title' => t('Delivery and pickup time,'),
-    //    '#options' => array(
-    //       '0700' => t('07:00 am'),
-    //       '0800' => t('08:00 am'),
-    //       '0900' => t('09:00 am'),
-    //       '1000' => t('10:00 am'),
-    //       '1100' => t('11:00 am'),
-    //       '1200' => t('12:00 pm'),
-    //       '1300' => t('01:00 pm'),
-    //       '1400' => t('02:00 pm'),
-    //       '1500' => t('03:00 pm'),
-    //       '1600' => t('04:00 pm'),
-    //       '1700' => t('05:00 pm'),
-    //       '1800' => t('06:00 pm'),
-    //       '1900' => t('07:00 pm'),
-    //       '2000' => t('08:00 pm'),
-    //       '2100' => t('09:00 pm'),
-    //       '2200' => t('10:00 pm'),
-    //    ),
-    //    // '#default_value' => $category['selected'],
-    //    '#required' => TRUE,
-    //    '#description' => t('Select delivery and pick up time'),
-    //    '#weight' => '0',
-    // );
 
   } // $form_id == 'availability_calendar_booking_formlet_form')
 
@@ -301,7 +268,9 @@ function fastlane_form_alter(&$form, &$form_state, $form_id) {
         // convert military time standard time
         $delivery_time = date("g:i a", strtotime($delivery_time));
 
-        $duration = ($query_parameters['duration'] - 1); // when choosing day vs over-night the duration is inflated by 1
+        $duration = $query_parameters['duration'];
+
+        //$duration = ($query_parameters['duration'] - 1); // when choosing day vs over-night the duration is inflated by 1
 
        if ($duration > 1) {
         $duration_display = t($duration . ' days');
@@ -348,8 +317,8 @@ function fastlane_form_alter(&$form, &$form_state, $form_id) {
 
        // If it's a NYC zipcode, $35 charge
         if (stristr($nyc_zipcodes, $zip_code)) {
-          $delivery_fee = 35;
-          $delivery_fee_display = t('New York City delivery/pickup fee');
+          $delivery_fee = 0;
+          $delivery_fee_display = t('Free delivery/pickup from location of your choice in New Jersey');
           $delivery_fee_flag = FALSE;
         }
 
@@ -370,8 +339,6 @@ function fastlane_form_alter(&$form, &$form_state, $form_id) {
           $delivery_fee_display = t('We will contact you regarding the delivery fee');
           $delivery_fee_flag = TRUE;
         }
-
-
 
         /*
           calculate rental fee, delivery fee, tax and total amount
@@ -411,21 +378,6 @@ function fastlane_form_alter(&$form, &$form_state, $form_id) {
         $form['submitted']['private_fields']['duration']['#default_value'] = $duration;
         $form['submitted']['private_fields']['df_amount']['#default_value'] = $delivery_fee;
 
-
-        // $form['delivery_fee_flag'] = array(
-        //   '#type' => 'textfield',
-        //   '#title' => t('Delivery fee flag'),
-        //   '#default_value' =>  t('Negotiate fee with customer and collect on delivery'),
-        // );
-
-
-        // $form['card_authorization_notice'] = array(
-        //   '#type' => 'textfield',
-        //   '#title' => t('Please note'),
-        //   '#default_value' =>  t('TODO Add text from FAQ or link to it'),
-        // );
-
-
       }
 
     }
@@ -440,97 +392,6 @@ function fastlane_form_alter(&$form, &$form_state, $form_id) {
   } // $form_id == 'webform_client_form_8')
 
 } // function fastlane_form_alter(&$form, &$form_state, $form_id)
-
-/**
- * Respond to a Webform submission being inserted.
- *
- * Note that this hook is called after a submission has already been saved to
- * the database. If needing to modify the submission prior to insertion, use
- * hook_webform_submission_presave().
- *
- * @param $node
- *   The Webform node on which this submission was made.
- * @param $submission
- *   The Webform submission that was just inserted into the database.
- */
-function fastlane_webform_submission_insert($node, $submission) {
-  // Update a record in a 3rd-party module table when a submission is updated.
-  //
-  // dpm($node, '$node');
-  // dpm($submission->data, '$submission->data');
-
-//   module_load_include('inc', 'availability_calendar');
-//   //
-  db_update('availability_calendar_availability')
-    ->fields(array(
-      'date' => $submission->data[28][0],
-      // 'sid' => '4', // this is the Pending state
-      'sid' => '3', // this is the Rented state
-    ))
-    ->condition('cid', $submission->data[30][0], '=')
-    ->condition('date', $submission->data[28][0], '=')
-    ->execute();
-
-  db_update('availability_calendar_availability')
-    ->fields(array(
-      'date' => $submission->data[29][0],
-      // 'sid' => '4', // this is the Pending state
-      'sid' => '3', // this is the Rented state
-    ))
-    ->condition('cid', $submission->data[30][0], '=')
-    ->condition('date', $submission->data[29][0], '=')
-    ->execute();
-
-  // drupal_set_message('deliver date - cid = ' . $submission->cid->value . ' from-date = ' . $submission->from_iso->value);
-  // drupal_set_message('pickup date - cid = ' . $submission->cid->value . ' to-date = ' . $submission->to_iso->value);
-
-  // drupal_set_message('nid = ' . $node->nid);
-  // drupal_set_message('sid = ' . $submission->sid);
-  // drupal_set_message('deliver date = ' . $submission->data[28][0]);
-  // drupal_set_message('pick-up date = ' . $submission->data[29][0]);
-  // drupal_set_message('calendar id = ' . $submission->data[30][0]);
-}
-
-
-function available_times_test($start_hour, $end_hour, $cleanup) {
-  $delivery_hours = array(
-    '9:00am'    => '0900',
-    '10:00am'   => '1000',
-    '11:00am'   => '1100',
-    '12:00pm'   => '1200',
-    '1:00pm'    => '1300',
-    '2:00pm'    => '1400',
-    '3:00pm'    => '1500',
-    '4:00pm'    => '1600',
-    '5:00pm'    => '1700',
-    '6:00pm'    => '1800',
-    '7:00pm'    => '1900',
-    '8:00pm'    => '2000',
-    '9:00pm'    => '2100');
-
-  foreach ($delivery_hours as $key => $value) {
-    // Remove hours before the start time
-    if ($start_hour > $value) {
-      unset($delivery_hours[$key]);
-    }
-    // Remove hours after the end time
-    if ($end_hour < $value) {
-      unset($delivery_hours[$key]);
-    }
-  }
-  return $delivery_hours;
-}
-
-
-// sprintf() adds a leading zero to the hour string if needed
-$cleanup_hours = sprintf('%04d', '0200'); // Need  2 hours between deliveries
-$start_hour = sprintf('%04d', '0300'); // from sql query
-$end_hour = sprintf('%04d', '2300'); // from sql query
-
-$start_hour = $start_hour + $cleanup_hours;
-$end_hour = $end_hour - $cleanup_hours;
-
-$select_list = available_times($start_hour, $end_hour);
 
 
 /**
@@ -563,7 +424,7 @@ function fastlane_webform_select_options_info() {
     'options arguments' => array(
       'start_hour' => t($start_hour),
       'end_hour' => t($end_hour),
-      'start_hour' => t($cleanup_hours),
+      // 'start_hour' => t($cleanup_hours),
     ),
   );
     //dpm($items, '$items');
@@ -573,7 +434,8 @@ function fastlane_webform_select_options_info() {
 /**
  * Option list containing the days of the week.
  */
-function available_times($component, $flat, $arguments) {
+// function available_times($component, $flat, $arguments) {
+function available_times($component, $flat) {
   $delivery_hours = array(
     '0900' => t('9:00am'),
     '1000' => t('10:00am'),
@@ -591,15 +453,45 @@ function available_times($component, $flat, $arguments) {
     '2200' => t('10:00pm'),
   );
 
-  // sprintf() adds a leading zero to the hour string if needed
-  $cleanup_hours = sprintf('%04d', '0200'); // Need  2 hours between deliveries
-  $start_hour = sprintf('%04d', '0300'); // from sql query
-  $end_hour = sprintf('%04d', '2300'); // from sql query
+  $query_parameters = drupal_get_query_parameters();
 
-  $start_hour = sprintf('%04d', ($start_hour + $cleanup_hours));
-  $end_hour = sprintf('%04d', ($end_hour - $cleanup_hours));
-//dpm($start_hour, 'start hour');
-//dpm($end_hour, 'end hour');
+  $deliver_date = $query_parameters['from_iso'];
+  $pickup_date = $query_parameters['to_iso'];
+  $cid = $query_parameters['cid'];
+
+  $previous_time = db_select('fastlane_dp_times', 'dt')
+    ->fields('dt')
+    ->condition('cid', $cid,'=')
+    ->condition('deliver_date', $deliver_date,'=')
+    ->execute()
+    ->fetchAssoc();
+
+  $next_time = db_select('fastlane_dp_times', 'dt')
+    ->fields('dt')
+    ->condition('cid', $cid,'=')
+    ->condition('pickup_date', $pickup_date,'=')
+    ->execute()
+    ->fetchAssoc();
+
+  if ($previous_time['dp_time'] > 0 ) {
+    $start_hour = $previous_time['dp_time'];
+  }
+  else {
+    $start_hour = 0;
+  }
+
+  if ($next_time['dp_time'] > 0 ) {
+    $end_hour = $next_time['dp_time'];
+  }
+  else {
+    $end_hour = 0;
+  }
+
+  $cleanup_hours = sprintf('%04d', '0200'); // Need  2 hours between deliveries
+  // $start_hour = sprintf('%04d',   $start_hour);
+  // $end_hour = sprintf('%04d', '$end_hour');
+  $start_hour = $start_hour + $cleanup_hours;
+  $end_hour = sprintf('%04d', $end_hour - $cleanup_hours);
 
   foreach ($delivery_hours as $key => $value) {
     //echo  $start_hour . "start hour = " . $key . ", value=" . $value;
@@ -614,12 +506,8 @@ function available_times($component, $flat, $arguments) {
     }
   }
 
-  //print_r($delivery_hours);
-
   return $delivery_hours;
 
 }
 
 $select_list = available_times($start_hour, $end_hour);
-
-//dpm($delivery_hours, '$delivery_hours');
