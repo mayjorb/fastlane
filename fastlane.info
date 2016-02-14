@@ -3,5 +3,5 @@ description = Customizations for FastLane Motorcycle Rentals website.
 package = FastLane
 core = 7.x
 
-version = "7.x-1.10" 
+version = "7.x-1.11" 
 project = "fastlane"

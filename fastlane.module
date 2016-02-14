@@ -116,8 +116,8 @@ function fastlane_payeezy_form_callback() {
   $transaction_key = "Xl~6o4RNFSEcsp4WZ8p7"; // Take from Payment Pages configuration interface
 
   // set to FALSE for REAL transactions
-  // $x_test_request = FALSE;
-  $x_test_request = TRUE;
+  $x_test_request = FALSE;
+  //$x_test_request = TRUE;
   // LIVE
 
   // DEV - comment to use LIVE
@@ -190,7 +190,7 @@ function fastlane_payeezy_form_callback() {
 
   $content .= '</form>';
 
-  //$content .= '<script type="text/javascript">document.myForm.submit();</script>';
+  $content .= '<script type="text/javascript">document.myForm.submit();</script>';
 
   return $content;
 
@@ -457,6 +457,11 @@ function available_times($component, $flat) {
 
   $deliver_date = $query_parameters['from_iso'];
   $pickup_date = $query_parameters['to_iso'];
+
+  // convert string to date and remove a day or add a day
+  $deliver_date = date('Y-m-d', strtotime('-1 day', strtotime($deliver_date)));
+  $pickup_date = date('Y-m-d', strtotime('+1 day', strtotime($pickup_date)));
+
   $cid = $query_parameters['cid'];
 
   $previous_time = db_select('fastlane_dp_times', 'dt')
