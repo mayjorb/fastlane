@@ -190,7 +190,7 @@ function fastlane_payeezy_form_callback() {
 
   $content .= '</form>';
 
-  $content .= '<script type="text/javascript">document.myForm.submit();</script>';
+  //$content .= '<script type="text/javascript">document.myForm.submit();</script>';
 
   return $content;
 
@@ -235,6 +235,7 @@ function fastlane_form_alter(&$form, &$form_state, $form_id) {
     if (isset($query_parameters['entity_id'])) {
 
       $nid = $query_parameters['entity_id']; // $nid
+      $delivery_time = array();
 
       // Calculate delivery distance based on user geolocation and location of bike
 
@@ -254,8 +255,8 @@ function fastlane_form_alter(&$form, &$form_state, $form_id) {
         $address_2 = $user_fields->field_address['und'][0]['premise']; // address 2
         $city = $user_fields->field_address['und'][0]['locality']; // city
         $state = $user_fields->field_address['und'][0]['administrative_area']; // state
-        //$zip_code = $user_fields->field_address['und'][0]['postal_code']; // zipcode
-        $zip_code = '10103'; // zipcode test if in NYC
+        $zip_code = $user_fields->field_address['und'][0]['postal_code']; // zipcode
+        // $zip_code = '10103'; // zipcode test if in NYC
         $geolocation = $user_fields->field_geofield['und'][0]['geom']; // geofield (POINT (-104.803022838.8879924)
 
         // get proximity of user from resource, set value and display text
@@ -264,7 +265,13 @@ function fastlane_form_alter(&$form, &$form_state, $form_id) {
         $delivery_distance = trim(strip_tags(views_embed_view($view_name, $display_id, $nid)));
         $delivery_distance_display = $delivery_distance . ' miles';
 
-        $delivery_time = $query_parameters['delivery_time'];
+        if(isset($query_parameters['delivery_time'])) {
+          $delivery_time = $query_parameters['delivery_time'];
+        }
+        else {
+          $delivery_time = '0900';
+        }
+        //$delivery_time = $query_parameters['delivery_time'];
         // convert military time standard time
         $delivery_time = date("g:i a", strtotime($delivery_time));
 
@@ -330,7 +337,7 @@ function fastlane_form_alter(&$form, &$form_state, $form_id) {
 
         elseif (($delivery_distance > 25) && ($delivery_distance <= 50)) {
           $delivery_fee = '50';
-          $delivery_fee_display = t('Free delivery/pickup within 25-50 miles');
+          $delivery_fee_display = t('$50 delivery/pickup fee within 25-50 miles');
           $delivery_fee_flag = FALSE;
         }
 
@@ -375,6 +382,7 @@ function fastlane_form_alter(&$form, &$form_state, $form_id) {
 
         // private fields
         $form['submitted']['private_fields']['customer_id']['#default_value'] = $customer_id;
+        //$form['submitted']['private_fields']['cid']['#default_value'] = $customer_id;
         $form['submitted']['private_fields']['duration']['#default_value'] = $duration;
         $form['submitted']['private_fields']['df_amount']['#default_value'] = $delivery_fee;
 
@@ -417,16 +425,19 @@ function fastlane_form_alter(&$form, &$form_state, $form_id) {
  */
 function fastlane_webform_select_options_info() {
   $items = array();
+  // $start_hour = 0;
+  // $end_hour = 0;
 
   $items['available_times'] = array(
     'title' => t('Delivery times'),
     'options callback' => 'available_times',
-    'options arguments' => array(
-      'start_hour' => t($start_hour),
-      'end_hour' => t($end_hour),
-      // 'start_hour' => t($cleanup_hours),
-    ),
   );
+  //   'options arguments' => array(
+  //     'start_hour' => t($start_hour),
+  //     'end_hour' => t($end_hour),
+  //     // 'start_hour' => t($cleanup_hours),
+  //   ),
+  // );
     //dpm($items, '$items');
   return $items;
 }
@@ -436,6 +447,8 @@ function fastlane_webform_select_options_info() {
  */
 // function available_times($component, $flat, $arguments) {
 function available_times($component, $flat) {
+
+  // times available for delivery/pickup
   $delivery_hours = array(
     '0900' => t('9:00am'),
     '1000' => t('10:00am'),
@@ -454,65 +467,219 @@ function available_times($component, $flat) {
   );
 
   $query_parameters = drupal_get_query_parameters();
+  if (isset($query_parameters['cid'])) {
 
-  $deliver_date = $query_parameters['from_iso'];
-  $pickup_date = $query_parameters['to_iso'];
+    $cid = $query_parameters['cid'];
 
-  // convert string to date and remove a day or add a day
-  $deliver_date = date('Y-m-d', strtotime('-1 day', strtotime($deliver_date)));
-  $pickup_date = date('Y-m-d', strtotime('+1 day', strtotime($pickup_date)));
+    $deliver_date = $query_parameters['from_iso'];
+    $pickup_date = $query_parameters['to_iso'];
 
-  $cid = $query_parameters['cid'];
+    // dpm($deliver_date, 'before conversion $deliver_date');
+    // dpm($pickup_date, 'before conversion $pickup_date');
 
-  $previous_time = db_select('fastlane_dp_times', 'dt')
-    ->fields('dt')
-    ->condition('cid', $cid,'=')
-    ->condition('deliver_date', $deliver_date,'=')
-    ->execute()
-    ->fetchAssoc();
+    // convert string to date and remove a day or add a day
+    //$deliver_date = date('Y-m-d', strtotime('-1 day', strtotime($deliver_date)));
+    $pickup_date = date('Y-m-d', strtotime('+1 day', strtotime($pickup_date)));
 
-  $next_time = db_select('fastlane_dp_times', 'dt')
-    ->fields('dt')
-    ->condition('cid', $cid,'=')
-    ->condition('pickup_date', $pickup_date,'=')
-    ->execute()
-    ->fetchAssoc();
+    // dpm($deliver_date, 'after conversion $deliver_date');
+    // dpm($pickup_date, 'after conversion $pickup_date');
 
-  if ($previous_time['dp_time'] > 0 ) {
-    $start_hour = $previous_time['dp_time'];
-  }
-  else {
-    $start_hour = 0;
-  }
+    $previous_time = db_select('fastlane_dp_times', 'dt')
+      ->fields('dt')
+      ->condition('cid', $cid,'=')
+      //->condition('deliver_date', $deliver_date,'=')
+      //->condition('deliver_date', $pickup_date,'=')
+      ->condition('pickup_date', $deliver_date,'=')
+      ->execute()
+      ->fetchAssoc();
 
-  if ($next_time['dp_time'] > 0 ) {
-    $end_hour = $next_time['dp_time'];
-  }
-  else {
-    $end_hour = 0;
-  }
+    $next_time = db_select('fastlane_dp_times', 'dt')
+      ->fields('dt')
+      ->condition('cid', $cid,'=')
+      // ->condition('pickup_date', $pickup_date,'=')
+      //->condition('pickup_date', $deliver_date,'=')
+      ->condition('deliver_date', $pickup_date,'=')
+      ->execute()
+      ->fetchAssoc();
 
-  $cleanup_hours = sprintf('%04d', '0200'); // Need  2 hours between deliveries
-  // $start_hour = sprintf('%04d',   $start_hour);
-  // $end_hour = sprintf('%04d', '$end_hour');
-  $start_hour = $start_hour + $cleanup_hours;
-  $end_hour = sprintf('%04d', $end_hour - $cleanup_hours);
+      // dpm($previous_time, '$previous_time');
+      // dpm($next_time, '$next_time');
 
-  foreach ($delivery_hours as $key => $value) {
-    //echo  $start_hour . "start hour = " . $key . ", value=" . $value;
-    //echo "<br>";
-    // Remove hours before the start time
-    if ($start_hour > $key) {
-      unset($delivery_hours[$key]);
+    if ($previous_time['dp_time'] > 0 ) {
+      $start_hour = $previous_time['dp_time'];
     }
-    // Remove hours after the end time
-    if ($end_hour < $key) {
-      unset($delivery_hours[$value]);
+    else {
+      $start_hour = '0000';
     }
+
+    if ($next_time['dp_time'] > 0 ) {
+      $end_hour = $next_time['dp_time'];
+    }
+    else {
+      $end_hour = '2400';
+    }
+
+    $cleanup_hours = '0200'; // Need  2 hours between deliveries
+
+    $start_hour = $start_hour + $cleanup_hours;
+    $start_hour = str_pad($start_hour,4, '0', STR_PAD_LEFT);
+
+    $end_hour = $end_hour - $cleanup_hours;
+    $end_hour = str_pad($end_hour,4, '0', STR_PAD_LEFT);
+
+    // echo '$before loop - start_hour = ' . $start_hour . '<br>';
+    // echo '$before loop - $endhour = ' . $end_hour . '<br><br>';
+
+    foreach ($delivery_hours as $key => $value) {
+      // echo '$key = ' . $key . '<br>';
+      // echo '$value = ' . $value . '<br>';
+      // echo '$start_hour = ' . $start_hour . '<br>';
+      // echo '$end_hour = ' . $end_hour . '<br><br>';
+      // Remove hours before the start time
+      if ($start_hour > $key) {
+        unset($delivery_hours[$key]);
+      }
+      // Remove hours after the end time
+      if ($end_hour < $key) {
+        unset($delivery_hours[$key]);
+      }
+    }
+
+    return $delivery_hours;
+
   }
 
-  return $delivery_hours;
+  else {
+    return $delivery_hours;
+  }
 
 }
+/**
+ * Option list containing the hours available for a rental on deliver/pickup
+ * time based on deliver date and pickup date.
+ */
+// function available_times($component, $flat, $arguments) {
+// function fastlane_open_hours() {
+//   $available_hours = array(
+//     '0900' => t('9:00am'),
+//     '1000' => t('10:00am'),
+//     '1100' => t('11:00am'),
+//     '1200' => t('12:00pm'),
+//     '1300' => t('1:00pm'),
+//     '1400' => t('2:00pm'),
+//     '1500' => t('3:00pm'),
+//     '1600' => t('4:00pm'),
+//     '1700' => t('5:00pm'),
+//     '1800' => t('6:00pm'),
+//     '1900' => t('7:00pm'),
+//     '2000' => t('8:00pm'),
+//     '2100' => t('9:00pm'),
+//     '2200' => t('10:00pm'),
+//   );
+//
+//   return $available_hours;
+// }
 
-$select_list = available_times($start_hour, $end_hour);
+// function fastlane_available_times() {
+//
+//   $available_hours = array(
+//     '0900' => t('9:00am'),
+//     '1000' => t('10:00am'),
+//     '1100' => t('11:00am'),
+//     '1200' => t('12:00pm'),
+//     '1300' => t('1:00pm'),
+//     '1400' => t('2:00pm'),
+//     '1500' => t('3:00pm'),
+//     '1600' => t('4:00pm'),
+//     '1700' => t('5:00pm'),
+//     '1800' => t('6:00pm'),
+//     '1900' => t('7:00pm'),
+//     '2000' => t('8:00pm'),
+//     '2100' => t('9:00pm'),
+//     '2200' => t('10:00pm'),
+//   );
+//
+//   if (isset($query_parameters['entity_id'])) {
+//
+//
+//   //available_times($component, $flat)
+//
+//   $query_parameters = drupal_get_query_parameters();
+//
+//   $deliver_date = $query_parameters['from_iso'];
+//   $pickup_date = $query_parameters['to_iso'];
+//
+//   // convert string to date and remove a day or add a day
+//   $deliver_date = date('Y-m-d', strtotime('-1 day', strtotime($deliver_date)));
+//   $pickup_date = date('Y-m-d', strtotime('+1 day', strtotime($pickup_date)));
+//
+//   $cid = $query_parameters['cid'];
+//
+//   $previous_time = db_select('fastlane_dp_times', 'dt')
+//     ->fields('dt')
+//     ->condition('cid', $cid,'=')
+//     ->condition('deliver_date', $deliver_date,'=')
+//     ->execute()
+//     ->fetchAssoc();
+//
+//   $next_time = db_select('fastlane_dp_times', 'dt')
+//     ->fields('dt')
+//     ->condition('cid', $cid,'=')
+//     ->condition('pickup_date', $pickup_date,'=')
+//     ->execute()
+//     ->fetchAssoc();
+//
+//   if ($previous_time['dp_time'] > 0 ) {
+//     $start_hour = $previous_time['dp_time'];
+//   }
+//   else {
+//     $start_hour = 0;
+//   }
+//
+//   if ($next_time['dp_time'] > 0 ) {
+//     $end_hour = $next_time['dp_time'];
+//   }
+//   else {
+//     $end_hour = 0;
+//   }
+//
+//   $cleanup_hours = sprintf('%04d', '0200'); // Need  2 hours between deliveries
+//   // $start_hour = sprintf('%04d',   $start_hour);
+//   // $end_hour = sprintf('%04d', '$end_hour');
+//   $start_hour = $start_hour + $cleanup_hours;
+//   $end_hour = sprintf('%04d', $end_hour - $cleanup_hours);
+//
+//   foreach ($delivery_hours as $key => $value) {
+//     //echo  $start_hour . "start hour = " . $key . ", value=" . $value;
+//     //echo "<br>";
+//     // Remove hours before the start time
+//     if ($start_hour > $key) {
+//       unset($delivery_hours[$key]);
+//     }
+//     // Remove hours after the end time
+//     if ($end_hour < $key) {
+//       unset($delivery_hours[$value]);
+//     }
+//   }
+//
+//   return $delivery_hours;
+//
+// }
+
+//$select_list = available_times($start_hour, $end_hour);
+
+
+/**
+ * @file
+ * The Remove RON Module.
+ *
+ * Removes the /node path and page from your website, forever. https://www.youtube.com/watch?v=H-Q7b-vHY3Q
+ *
+ */
+
+/**
+ * Implementation of hook_menu_alter().
+ */
+function fastlane_menu_alter(&$items) {
+    unset($items['node']);
+}
