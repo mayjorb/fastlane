@@ -73,7 +73,7 @@ function fastlane_payeezy_form_callback() {
   //dpm($data = webform_menu_submission_load($my_sid,$my_webform_nid)->data, '$data');
 
   // Set easy to remember vars from data array.
-  $customer_id = $data[55][0];
+  $customer_id = $data[61][0];
   $first_name = $data[2][0];
   $last_name = $data[3][0];
   $email = $data[1][0];
@@ -89,7 +89,7 @@ function fastlane_payeezy_form_callback() {
   $sub_total = $data[50][0];
   $tax_total = $data[49][0];
   $grand_total = $data[51][0];
-  $delivery_fee = $data[58][0];
+  $delivery_fee = $data[63][0];
   $delivery_fee_display = $data[48][0];
   //dpm($delivery_fee, '$delivery_fee');
   $tax_amount_display = $data[49][0];
@@ -98,7 +98,7 @@ function fastlane_payeezy_form_callback() {
   $length_of_rental = $data[45][0];
   $motorcycle = $data[37][0];
   $description = 'motorcycle rental';
-  $duration = $data[57][0];
+  $duration = $data[61][0];
 
   $motorcycle_line_item = $bike_id . '<|>' . $motorcycle . '<|>' .   $motorcycle . ' ' . $description . '<|>' . $duration  . '<|>' . $daily_rental_fee . '<|>YES';
 
@@ -192,6 +192,8 @@ function fastlane_payeezy_form_callback() {
 
   $content .= '<script type="text/javascript">document.myForm.submit();</script>';
 
+  //dpm($content, '$content');
+
   return $content;
 
 }
@@ -219,6 +221,7 @@ function fastlane_form_alter(&$form, &$form_state, $form_id) {
   if ($form_id == 'webform_client_form_8') {
 
     //dpm($form['submitted'], '$form submitted');
+
 
     /*****************************************************************************
     *  Webform overrides
@@ -381,10 +384,11 @@ function fastlane_form_alter(&$form, &$form_state, $form_id) {
         $form['submitted']['rates_fees']['total_cost']['#default_value'] = $total_amount_display;
 
         // private fields
-        $form['submitted']['private_fields']['customer_id']['#default_value'] = $customer_id;
+        $form['submitted']['private_fields']['customer_id']['#value'] = $customer_id;
         //$form['submitted']['private_fields']['cid']['#default_value'] = $customer_id;
-        $form['submitted']['private_fields']['duration']['#default_value'] = $duration;
-        $form['submitted']['private_fields']['df_amount']['#default_value'] = $delivery_fee;
+        $form['submitted']['private_fields']['duration']['#value'] = $duration;
+        //$form['submitted']['private_fields']['df_amount']['#default_value'] = $delivery_fee;
+        $form['submitted']['private_fields']['df_amount']['#value'] = $delivery_fee;
 
       }
 
