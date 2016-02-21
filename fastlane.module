@@ -181,7 +181,7 @@ function fastlane_payeezy_form_callback() {
   $content .= '<input class="form-control" type="hidden" name="x_email" value="' . $email . '"/>';
 
   $content .= '</div>';
-  $content .= '<button type="submit" class="btn btn-success">Continue</button>';
+  // $content .= '<button type="submit" class="btn btn-success">Continue</button>';
 
   // Create parameters input in html.
   foreach ($_POST as $a => $b) {
@@ -190,7 +190,7 @@ function fastlane_payeezy_form_callback() {
 
   $content .= '</form>';
 
-  //$content .= '<script type="text/javascript">document.myForm.submit();</script>';
+  $content .= '<script type="text/javascript">document.myForm.submit();</script>';
 
   return $content;
 
@@ -325,7 +325,7 @@ function fastlane_form_alter(&$form, &$form_state, $form_id) {
        // If it's a NYC zipcode, $35 charge
         if (stristr($nyc_zipcodes, $zip_code)) {
           $delivery_fee = 0;
-          $delivery_fee_display = t('Free delivery/pickup from location of your choice in New Jersey');
+          $delivery_fee_display = t('Free delivery/pickup to the train station, bus stop, or location of your choice in New Jersey');
           $delivery_fee_flag = FALSE;
         }
 
@@ -337,7 +337,7 @@ function fastlane_form_alter(&$form, &$form_state, $form_id) {
 
         elseif (($delivery_distance > 25) && ($delivery_distance <= 50)) {
           $delivery_fee = '50';
-          $delivery_fee_display = t('$50 delivery/pickup fee within 25-50 miles');
+          $delivery_fee_display = t('$50 delivery/pickup fee within 25-50 miles of 07645');
           $delivery_fee_flag = FALSE;
         }
 
