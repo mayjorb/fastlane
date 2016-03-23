@@ -190,7 +190,7 @@ function fastlane_payeezy_form_callback() {
 
   $content .= '</form>';
 
-  $content .= '<script type="text/javascript">document.myForm.submit();</script>';
+  // $content .= '<script type="text/javascript">document.myForm.submit();</script>';
 
   //dpm($content, '$content');
 
@@ -237,8 +237,12 @@ function fastlane_form_alter(&$form, &$form_state, $form_id) {
 
     if (isset($query_parameters['entity_id'])) {
 
+      // dpm($query_parameters, '$query_parameters');
+
       $nid = $query_parameters['entity_id']; // $nid
       $delivery_time = array();
+
+      $node = node_load($nid);
 
       // Calculate delivery distance based on user geolocation and location of bike
 
@@ -359,9 +363,89 @@ function fastlane_form_alter(&$form, &$form_state, $form_id) {
           $total_amount = ($total_rental+$tax);
         */
 
-        $rental_rate = 250;
+        /* Discounts
+          2016-03-22 15% discount on 4 or more day rental
+        */
+
+        $msg = t('');
+
+        if (!isset($duration)) {
+          $duration = 1;
+        }
+
+        // base rental_rate = 250;
+        if (!isset($node->field_daily_fee['und'][0]['value'])) {
+          $rental_rate = 250;
+          $base_rental_rate = $rental_rate;
+        }
+        else {
+          $rental_rate = $node->field_daily_fee['und'][0]['value'];
+          $base_rental_rate = $rental_rate;
+        }
+
+        // unset the value for delivery distance if over 50 miles
+        if ($delivery_distance > 50) {
+          $delivery_distance_display = '';
+        }
+        else {
+          $delivery_distance_display = 'Distance from 07645 zip code ~ ' . $delivery_distance;
+        }
+
+        // set var for delivery distance
+        // 2016-03-22 15% discount on 4 or more day rental
+
+        if ($duration > 3) {
+          $rental_rate = ($rental_rate*85)/100;
+          $msg = t('15% discount for rentals 4 days or more. ' . "\n" . 'Regular Daily (24 hour) rental rate: $' . number_format($base_rental_rate) . "\n" . 'After 15% discount: $' . number_format($rental_rate,2));
+          $delivery_fee_display = $msg .  "\n" . $delivery_fee_display . "\n" . $delivery_distance_display;
+        }
+
+
+
+        // Set var for billable days. Used if a rent x get y free discounts
+        $billable_duration = $duration;
+
+        // If needed at some point - Rent 4 or days and get 1 day free
+
+        // set discounts for rentals up to 1 month
+        // if (($billable_duration > 3 && $billable_duration < 8)) {
+        //   $billable_duration = $billable_duration - 1;
+        //   $msg = t('Rent 4 or more days and get 1 day free');
+        // }
+        //
+        // if (($billable_duration > 7 && $billable_duration < 12)) {
+        //   $billable_duration = $billable_duration - 2;
+        //   $msg = t('Rent 8 or more days and get 2 days free');
+        // }
+        //
+        // if (($billable_duration > 11 && $billable_duration < 16)) {
+        //   $billable_duration = $billable_duration - 3;
+        //   $msg = t('Rent 12 or more days and get 3 days free');
+        // }
+        //
+        // if (($billable_duration > 15 && $billable_duration < 20)) {
+        //   $billable_duration = $billable_duration - 4;
+        //   $msg = t('Rent 16 or more days and get 4 days free');
+        // }
+        //
+        // if (($duration > 19 && $duration < 24)) {
+        //   $billable_duration = $billable_duration - 5;
+        //   $msg = t('Rent 20 or more days and get 5 days free');
+        // }
+        //
+        // if (($billable_duration > 23 && $billable_duration < 28)) {
+        //   $billable_duration = $billable_duration - 6;
+        //   $msg = t('Rent 24 or more days and get 6 days free');
+        // }
+        //
+        // if (($billable_duration > 27 && $billable_duration < 32)) {
+        //   $billable_duration = $billable_duration - 7;
+        //   $msg = t('Rent 28 or more days and get 7 days free');
+        // }
+
+
         $rental_rate_display = number_format($rental_rate,2);
-        $total_rental = ($duration*$rental_rate);
+        $total_rental = ($billable_duration*$rental_rate);
         $total_rental_display = number_format($total_rental,2);
         $taxable_total = ($total_rental+$delivery_fee);
         $taxable_total_display = number_format($taxable_total,2);
@@ -390,13 +474,16 @@ function fastlane_form_alter(&$form, &$form_state, $form_id) {
         //$form['submitted']['private_fields']['df_amount']['#default_value'] = $delivery_fee;
         $form['submitted']['private_fields']['df_amount']['#value'] = $delivery_fee;
 
+        // $form['submitted']['private_fields']['deliver_pickup_time_formatted']['#value'] = $delivery_time;
+
+
       }
 
     }
 
     else {
 
-      drupal_goto('motorcycles');
+    //  drupal_goto('motorcycles');
 
     }
 
@@ -558,6 +645,30 @@ function available_times($component, $flat) {
   }
 
 }
+// 59 is the time component
+/**
+ * Modify a Webform submission, prior to saving it in the database.
+ *
+ * @param $node
+ *   The Webform node on which this submission was made.
+ * @param $submission
+ *   The Webform submission that is about to be saved to the database.
+ */
+function fastlane_webform_submission_presave($node, &$submission) {
+  // Update some component's value before it is saved.
+  // format deliver/pickup time
+
+  $deliver_time = $submission->data[59][0];
+
+  $deliver_time_formatted = date("h:i a", STRTOTIME($deliver_time));
+
+  $submission->data[64][0] = $deliver_time_formatted;
+}
+
+
+
+
+
 /**
  * Option list containing the hours available for a rental on deliver/pickup
  * time based on deliver date and pickup date.
