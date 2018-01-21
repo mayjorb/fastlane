@@ -94,6 +94,7 @@ function fastlane_payeezy_form_callback() {
   $delivery_fee_display = $data[48][0];
   //dpm($delivery_fee, '$delivery_fee');
   $tax_amount_display = $data[49][0];
+  $domestic_security_fee = $data[65][0];
 
   $bike_id = $my_webform_nid;
   $length_of_rental = $data[45][0];
@@ -101,12 +102,14 @@ function fastlane_payeezy_form_callback() {
   $description = 'motorcycle rental';
   $duration = $data[61][0];
 
-  $motorcycle_line_item = $bike_id . '<|>' . $motorcycle . '<|>' .   $motorcycle . ' ' . $description . '<|>' . $duration  . '<|>' . $daily_rental_fee . '<|>YES';
+  $motorcycle_line_item = $bike_id . '<|>' . $motorcycle . '<|>' .   $motorcycle . ' ' . $description . '<|>' . $duration . '<|>' . $daily_rental_fee . '<|>YES';
 
   $delivery_line_item = '1<|>Delivery fee<|>' .  $delivery_fee_display . '<|>1<|>' . $delivery_fee . '<|>YES';
 
   $tax_line_item = '2<|>NJ Tax<|>New Jersey tax 6.625%<|>1<|>' . $tax_total . '<|>YES';
-
+  
+  $domestic_security_line_item = '3<|>Domestic Security Fee<|>New Jersey Domestic Security Fee (daily)<|>' . $duration . '<|> 5.00 <|>YES';
+  
   // generate invoice number 2016-01-03 40-1
   $invoice_number = date('Y-m-d') . ' ' . $my_sid . '-' . $customer_id ;
 
@@ -171,6 +174,8 @@ function fastlane_payeezy_form_callback() {
 
   $content .= '<input class="form-control" type="hidden" name="x_line_item" value="' . $tax_line_item . '"/>';
 
+  $content .= '<input class="form-control" type="hidden" name="x_line_item" value="' . $domestic_security_line_item . '"/>';
+  
   $content .= '<input class="form-control" type="hidden" name="x_first_name" value="' . $first_name . '"/>';
   $content .= '<input class="form-control" type="hidden" name="x_last_name" value="' . $last_name . '"/>';
   $content .= '<input class="form-control" type="hidden" name="x_address" value="' . $address . '"/>';
@@ -193,6 +198,7 @@ function fastlane_payeezy_form_callback() {
   
   // don't submit form if customer_id not set
   if (is_numeric($customer_id) && $customer_id > 0 && $customer_id == round($customer_id, 0)){
+    // dpm($content, '$content');
     $content .= '<script type="text/javascript">document.myForm.submit();</script>';
   }
   
@@ -469,12 +475,17 @@ function fastlane_form_alter(&$form, &$form_state, $form_id) {
         $total_rental_display = number_format($total_rental,2);
         $taxable_total = ($total_rental+$delivery_fee);
         $taxable_total_display = number_format($taxable_total,2);
+        $daily_dsf = 5;
+        $daily_dsf = number_format($daily_dsf,2);
+        $total_dsf = ($duration*$daily_dsf);
+        $domestic_security_fee_display = $total_dsf;
         // $tax = ($taxable_total*07)/100;
         // NJ tax rate changed to 6.875%
         // 2018-01 - NJ tax rate changed to 6.625%
         $tax = ($taxable_total*06.625)/100;
+        $dsf = $domestic_security_fee_display;
         $tax_display = number_format($tax,2);
-        $total_amount = ($taxable_total+$tax);
+        $total_amount = ($taxable_total+$tax+$dsf);
         $total_amount_display = number_format($total_amount,2);
 
 
@@ -488,6 +499,7 @@ function fastlane_form_alter(&$form, &$form_state, $form_id) {
 
         $form['submitted']['rates_fees']['subtotal']['#default_value'] = $taxable_total_display;
         $form['submitted']['rates_fees']['tax']['#default_value'] = $tax_display;
+        $form['submitted']['rates_fees']['domestic_security_fee']['#default_value'] = $domestic_security_fee_display;
         $form['submitted']['rates_fees']['total_cost']['#default_value'] = $total_amount_display;
 
         // private fields
